@@ -1,5 +1,5 @@
 import { techniques } from "@/data/catalog";
-import { buildProgress, titleFor } from "@/lib/progression";
+import { buildProgress, epithetFor, titleFor, type SystemLogEntry } from "@/lib/progression";
 import { defaultFederation } from "@/data/rules";
 import { todayIso } from "@/lib/dates";
 import { draftFromRola, toPerspective } from "@/lib/perspective";
@@ -31,6 +31,7 @@ export type DemoDb = {
   profiles: Profile[];
   sessions: StoredSession[];
   rolas: StoredRola[];
+  systemLogs?: Record<string, { ready: boolean; entries: SystemLogEntry[] }>;
 };
 
 const SEED_PROFILES: Profile[] = [
@@ -151,9 +152,39 @@ export function demoSignUp(
   return { ...db, currentUserId: profile.id, profiles: [...db.profiles, profile] };
 }
 
+export function demoSyncLog(db: DemoDb, userId: string, fresh: SystemLogEntry[]): { db: DemoDb; announced: SystemLogEntry[] } {
+  const current = db.systemLogs?.[userId] ?? { ready: false, entries: [] };
+  const known = new Set(current.entries.map((entry) => entry.id));
+  const novel = fresh.filter((entry) => !known.has(entry.id));
+  if (!current.ready) {
+    const entries = fresh.map((entry, index) => ({ ...entry, read: index !== fresh.length - 1 }));
+    return { db: { ...db, systemLogs: { ...db.systemLogs, [userId]: { ready: true, entries } } }, announced: [] };
+  }
+  return {
+    db: { ...db, systemLogs: { ...db.systemLogs, [userId]: { ready: true, entries: [...current.entries, ...novel.map((entry) => ({ ...entry, read: false }))] } } },
+    announced: novel,
+  };
+}
+
+export function demoMarkLogRead(db: DemoDb, userId: string): DemoDb {
+  const current = db.systemLogs?.[userId];
+  if (!current) return db;
+  return {
+    ...db,
+    systemLogs: {
+      ...db.systemLogs,
+      [userId]: { ...current, entries: current.entries.map((entry) => ({ ...entry, read: true })) },
+    },
+  };
+}
+
+export function demoLog(db: DemoDb, userId: string): SystemLogEntry[] {
+  return db.systemLogs?.[userId]?.entries ?? [];
+}
+
 export function demoUpdateProgress(
   db: DemoDb,
-  patch: { shareProgress?: boolean; equippedTitleId?: string | null },
+  patch: { shareProgress?: boolean; equippedTitleId?: string | null; equippedEpithetId?: string | null },
 ): DemoDb {
   const me = requireUser(db);
   return {
@@ -162,7 +193,7 @@ export function demoUpdateProgress(
   };
 }
 
-export function demoPublicBadge(db: DemoDb, userId: string, today: string): { level: number; title: string } | null {
+export function demoPublicBadge(db: DemoDb, userId: string, today: string): { level: number; title: string; epithet: string } | null {
   const profile = db.profiles.find((item) => item.id === userId);
   if (!profile?.shareProgress) return null;
   const view = buildProgress(db.rolas.filter((rola) => rola.athleteId === userId).map((rola) => ({
@@ -175,7 +206,7 @@ export function demoPublicBadge(db: DemoDb, userId: string, today: string): { le
     submissionsSuffered: rola.actions.filter((action) => action.performer === "partner" && action.actionType === "finalizacao").map((action) => ({ id: action.techniqueId })),
     techniquesUsed: rola.actions.filter((action) => action.performer === "self" && action.actionType === "tecnica").map((action) => ({ id: action.techniqueId })),
   })), today);
-  return { level: view.level, title: titleFor(view, profile.equippedTitleId) ?? "" };
+  return { level: view.level, title: titleFor(view, profile.equippedTitleId) ?? "", epithet: epithetFor(view, profile.equippedEpithetId) ?? "" };
 }
 
 export function demoUpdateProfile(

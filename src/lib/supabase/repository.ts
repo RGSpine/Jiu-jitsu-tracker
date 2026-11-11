@@ -3,6 +3,7 @@ import { defaultFederation, federations as bundledFederations, scoringRules as b
 import { draftFromRola, toPerspective } from "@/lib/perspective";
 import { buildPersonalSample } from "@/lib/sample-data";
 import { todayIso } from "@/lib/dates";
+import type { SystemLogEntry } from "@/lib/progression";
 import type {
   Belt,
   Federation,
@@ -386,8 +387,10 @@ export function browserRepository() {
     async saveProgress(patch: {
       shareProgress: boolean;
       equippedTitleId: string | null;
+      equippedEpithetId: string | null;
       publicLevel: number;
       publicTitle: string;
+      publicEpithet: string;
       seenUnlocks: string[];
     }) {
       const user = await currentUser();
@@ -396,20 +399,73 @@ export function browserRepository() {
         user_id: user.id,
         share_progress: patch.shareProgress,
         equipped_title_id: patch.equippedTitleId,
+        equipped_epithet_id: patch.equippedEpithetId,
         public_level: patch.publicLevel,
         public_title: patch.publicTitle,
+        public_epithet: patch.publicEpithet,
         seen_unlocks: patch.seenUnlocks,
       });
       fail(error, "Não foi possível salvar a progressão.");
     },
-    async publicBadge(userId: string): Promise<{ level: number; title: string } | null> {
+    async publicBadge(userId: string): Promise<{ level: number; title: string; epithet: string } | null> {
       const { data, error } = await supabase
         .from("progression")
-        .select("public_level, public_title, share_progress")
+        .select("public_level, public_title, public_epithet, share_progress")
         .eq("user_id", userId)
         .maybeSingle();
       if (error || !data?.share_progress) return null;
-      return { level: data.public_level as number, title: (data.public_title as string) ?? "" };
+      return {
+        level: data.public_level as number,
+        title: (data.public_title as string) ?? "",
+        epithet: (data.public_epithet as string) ?? "",
+      };
+    },
+    async syncLog(entries: SystemLogEntry[]): Promise<SystemLogEntry[]> {
+      const user = await currentUser();
+      if (!user) return [];
+      const { data: settings } = await supabase.from("progression").select("log_bootstrapped").eq("user_id", user.id).maybeSingle();
+      const ready = Boolean(settings?.log_bootstrapped);
+      const { data: existing } = await supabase.from("system_log").select("id").eq("user_id", user.id);
+      const known = new Set((existing ?? []).map((row) => row.id as string));
+      const novel = entries.filter((entry) => !known.has(entry.id));
+      if (novel.length) {
+        const { error } = await supabase.from("system_log").insert(novel.map((entry) => ({
+          id: entry.id,
+          user_id: user.id,
+          kind: entry.kind,
+          body: entry.body,
+          occurred_on: entry.occurredOn,
+          read_at: ready ? null : new Date().toISOString(),
+        })));
+        fail(error, "Não foi possível gravar o registro.");
+      }
+      if (!ready) {
+        const { error } = await supabase.from("progression").upsert({ user_id: user.id, log_bootstrapped: true });
+        fail(error, "Não foi possível gravar o registro.");
+        const last = entries.at(-1);
+        if (last) await supabase.from("system_log").update({ read_at: null }).eq("user_id", user.id).eq("id", last.id);
+        return [];
+      }
+      return novel;
+    },
+    async loadLog() {
+      const user = await currentUser();
+      if (!user) return [];
+      const { data, error } = await supabase.from("system_log").select("id, kind, body, occurred_on, read_at").eq("user_id", user.id).order("occurred_on");
+      fail(error, "Não foi possível abrir o registro.");
+      return (data ?? []).map((row) => ({
+        id: row.id as string,
+        kind: row.kind as "titulo" | "epiteto" | "atributo" | "posto" | "missao" | "surpresa",
+        body: row.body as string,
+        occurredOn: row.occurred_on as string,
+        read: Boolean(row.read_at),
+      }));
+    },
+    async markLogRead() {
+      const user = await currentUser();
+      if (!user) return;
+      const { error } = await supabase.from("system_log").update({ read_at: new Date().toISOString() }).eq("user_id", user.id).is("read_at", null);
+      fail(error, "Não foi possível marcar o registro.");
     },
     async signIn(email: string, password: string) {
       const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });

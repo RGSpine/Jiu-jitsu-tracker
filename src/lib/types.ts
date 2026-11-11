@@ -58,6 +58,7 @@ export type Profile = {
   /** O parceiro vê nível e título só se isto estiver ligado. */
   shareProgress?: boolean;
   equippedTitleId?: string | null;
+  equippedEpithetId?: string | null;
 };
 
 export type RolaAction = {

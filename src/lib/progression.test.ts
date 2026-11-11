@@ -36,40 +36,54 @@ describe("progressão", () => {
     ], "2026-11-02");
     const feet = view.attributes.find((item) => item.id === "pes");
     expect(feet?.level).toBe(0);
-    expect(view.skills.find((item) => item.id === "finalizador-pe")?.unlocked).toBe(false);
+    expect(view.titles.some((item) => item.title === "Finalizador de Pé")).toBe(false);
   });
 
-  it("não libera evolução com amostra pequena", () => {
-    const previous = Array.from({ length: 2 }, (_, index) => rola({
-      occurredOn: "2026-10-05",
+  it("chave de braço dá XP e surpresa, sem atributo próprio", () => {
+    const view = buildProgress([
+      rola({ submissionsApplied: [{ id: "kimura" }, { id: "armlock" }] }),
+    ], "2026-11-02");
+    expect(view.attributes.map((item) => item.id)).toEqual([
+      "queda", "passagem", "raspagem", "guarda", "costas", "pes", "estrangulamento", "defesa", "pontuacao",
+    ]);
+    expect(view.attributes.every((item) => item.level === 0)).toBe(true);
+    expect(view.xp).toBeGreaterThan(PROGRESSION.showUp);
+    expect(view.lines.find((item) => item.id === "surpresa-chave")?.unlocked).toBe(true);
+    expect(view.lines.find((item) => item.id === "surpresa-chave")?.name).toBe("Chave");
+  });
+
+  it("não libera Trator nem Finalizador de Pé com amostra pequena", () => {
+    const passes = Array.from({ length: 6 }, (_, index) => rola({
       sessionId: `p${index}`,
       techniquesUsed: [{ id: "passagem-de-joelho", category: "passagem" }],
     }));
-    const current = Array.from({ length: 6 }, (_, index) => rola({
-      occurredOn: "2026-11-05",
-      sessionId: `c${index}`,
-      techniquesUsed: [{ id: "passagem-de-joelho", category: "passagem" }],
-    }));
-    const view = buildProgress([...previous, ...current], "2026-11-11");
-    expect(view.skills.find((item) => item.id === "passador")?.unlocked).toBe(false);
-  });
-
-  it("libera título quando a taxa sobe de verdade", () => {
-    const previous = Array.from({ length: 8 }, (_, index) => rola({
-      occurredOn: `2026-10-${String(index + 1).padStart(2, "0")}`,
-      sessionId: `p${index}`,
+    const feet = Array.from({ length: 4 }, (_, index) => rola({
+      occurredOn: "2026-11-03",
+      sessionId: `f${index}`,
       modality: "nogi",
-      submissionsApplied: index < 2 ? [{ id: "chave-de-tornozelo" }] : [],
+      submissionsApplied: [{ id: "heel-hook" }],
     }));
-    const current = Array.from({ length: 8 }, (_, index) => rola({
+    const view = buildProgress([...passes, ...feet], "2026-11-11");
+    expect(view.titles.some((item) => item.title === "Passador")).toBe(false);
+    expect(view.titles.some((item) => item.title === "Trator Humano")).toBe(false);
+    expect(view.titles.some((item) => item.title === "Finalizador de Pé")).toBe(false);
+    expect(view.titles.some((item) => item.title === "Pegador de Pé")).toBe(false);
+  });
+
+  it("esconde a surpresa até ela acontecer", () => {
+    const view = buildProgress([rola()], "2026-11-02");
+    const secret = view.lines.find((item) => item.id === "surpresa-triangulo");
+    expect(secret?.hidden).toBe(true);
+    expect(secret?.name).toBe("???");
+  });
+
+  it("não chama ninguém de o Duro sem amostra", () => {
+    const view = buildProgress(Array.from({ length: 8 }, (_, index) => rola({
+      sessionId: `w${index}`,
+      result: "vitoria",
       occurredOn: `2026-11-${String(index + 1).padStart(2, "0")}`,
-      sessionId: `c${index}`,
-      modality: "nogi",
-      submissionsApplied: index < 4 ? [{ id: "heel-hook" }] : [],
-    }));
-    const view = buildProgress([...previous, ...current], "2026-11-11");
-    expect(view.skills.find((item) => item.id === "finalizador-pe")?.unlocked).toBe(true);
-    expect(view.titles.some((item) => item.title === "Finalizador de pé")).toBe(true);
+    })), "2026-11-11");
+    expect(view.epithets.find((item) => item.id === "o-duro")?.unlocked).toBe(false);
   });
 
   it("sobe de nível só com XP acumulado e separa a faixa real do posto", () => {
@@ -88,7 +102,8 @@ describe("progressão", () => {
       rola({ occurredOn: "2026-11-03", sessionId: "s2", submissionsApplied: [{ id: "triangulo" }] }),
     ], "2026-11-03");
     const events = diffProgress(before, after);
-    expect(events.some((event) => event.kind === "habilidade" && event.title === "Triângulo")).toBe(true);
+    expect(events.some((event) => event.kind === "surpresa" && event.body.includes("Triângulo"))).toBe(true);
+    expect(events.every((event) => event.body.startsWith("[SISTEMA]"))).toBe(true);
   });
 
   it("o histórico de exemplo abre habilidades e um posto intermediário", () => {
@@ -109,7 +124,8 @@ describe("progressão", () => {
     })), "2026-11-11");
     expect(view.level).toBeGreaterThan(8);
     expect(view.level).toBeLessThan(24);
-    expect(view.skills.filter((skill) => skill.unlocked).length).toBeGreaterThan(2);
+    expect(view.lines.filter((line) => line.unlocked && !line.hidden).length).toBeGreaterThan(2);
+    expect(view.titles.some((item) => item.title === "Trator Humano" || item.title === "Passador")).toBe(true);
     expect(view.quests.length).toBeGreaterThan(0);
   });
 
@@ -128,16 +144,7 @@ describe("progressão", () => {
 
 describe("teto do dia", () => {
   it("não passa do teto mesmo com ritmo", () => {
-    const xp = dayXp({
-      date: "2026-11-02",
-      minutes: 500,
-      rolas: 40,
-      sessions: new Set(["s"]),
-      subs: 20,
-      suffered: 0,
-      points: 80,
-      families: { quedas: 0, passagem: 0, guarda: 0, costas: 0, pes: 0, pescoco: 0, bracos: 0, defesa: 0, presenca: 0 },
-    }, 99);
+    const xp = dayXp({ minutes: 500, rolas: 40, subs: 20, points: 80 }, 99);
     expect(xp).toBe(PROGRESSION.dailyCap);
   });
 });

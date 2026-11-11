@@ -10,8 +10,11 @@ import {
   demoLoadSample,
   demoPerspectives,
   demoProfile,
+  demoLog,
+  demoMarkLogRead,
   demoPublicBadge,
   demoSaveSession,
+  demoSyncLog,
   demoSearch,
   demoUpdateProgress,
   demoSessionDraft,
@@ -23,6 +26,7 @@ import {
   loadDemoDb,
   saveDemoDb,
 } from "@/lib/demo-db";
+import type { SystemLogEntry } from "@/lib/progression";
 import { browserRepository } from "@/lib/supabase/repository";
 import type {
   Belt,
@@ -71,8 +75,11 @@ type AppContextValue = {
   saveSession: (draft: SessionDraft) => Promise<string>;
   deleteSession: (id: string) => Promise<void>;
   loadSample: () => Promise<void>;
-  saveProgress: (patch: { shareProgress: boolean; equippedTitleId: string | null; publicLevel: number; publicTitle: string; seenUnlocks: string[] }) => Promise<void>;
-  publicBadge: (userId: string) => Promise<{ level: number; title: string } | null>;
+  saveProgress: (patch: { shareProgress: boolean; equippedTitleId: string | null; equippedEpithetId: string | null; publicLevel: number; publicTitle: string; publicEpithet: string; seenUnlocks: string[] }) => Promise<void>;
+  publicBadge: (userId: string) => Promise<{ level: number; title: string; epithet: string } | null>;
+  syncLog: (entries: SystemLogEntry[]) => Promise<SystemLogEntry[]>;
+  loadLog: () => Promise<SystemLogEntry[]>;
+  markLogRead: () => Promise<void>;
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -262,7 +269,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       async saveProgress(patch) {
         if (!profile) return;
         if (mode === "demo") {
-          const db = demoUpdateProgress(loadDemoDb(), { shareProgress: patch.shareProgress, equippedTitleId: patch.equippedTitleId });
+          const db = demoUpdateProgress(loadDemoDb(), {
+            shareProgress: patch.shareProgress,
+            equippedTitleId: patch.equippedTitleId,
+            equippedEpithetId: patch.equippedEpithetId,
+          });
           saveDemoDb(db);
           bump(demoProfile(db), user);
           return;
@@ -272,6 +283,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       async publicBadge(userId) {
         if (mode === "demo") return demoPublicBadge(loadDemoDb(), userId, todayIso());
         return browserRepository().publicBadge(userId);
+      },
+      async syncLog(entries) {
+        if (!profile) return [];
+        if (mode === "demo") {
+          const result = demoSyncLog(loadDemoDb(), profile.id, entries);
+          saveDemoDb(result.db);
+          return result.announced;
+        }
+        return browserRepository().syncLog(entries);
+      },
+      async loadLog() {
+        if (!profile) return [];
+        if (mode === "demo") return demoLog(loadDemoDb(), profile.id);
+        return browserRepository().loadLog();
+      },
+      async markLogRead() {
+        if (!profile) return;
+        if (mode === "demo") {
+          saveDemoDb(demoMarkLogRead(loadDemoDb(), profile.id));
+          return;
+        }
+        await browserRepository().markLogRead();
       },
       async loadSample() {
         if (!profile) throw new Error("Entre na sua conta para continuar.");

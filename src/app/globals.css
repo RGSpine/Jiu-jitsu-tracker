@@ -531,23 +531,40 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 8px 0; }
 .quest { border: 1px solid var(--line); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--paper); }
 .share-row { display: flex; gap: 10px; align-items: center; font-weight: 700; }
 .system-layer { position: fixed; left: 0; right: 0; bottom: 88px; display: flex; justify-content: center; z-index: 30; padding: 0 12px; }
-.system-toast {
+.system-panel {
   width: min(420px, 100%);
-  background: var(--bg);
-  color: var(--ink);
-  border: 2px solid var(--accent);
-  border-radius: 18px;
-  padding: 16px;
+  text-align: left;
+  background: #050505;
+  color: #fff;
+  border: 1px solid #c8102e;
+  border-left-width: 6px;
+  border-radius: 8px;
+  padding: 14px 14px 12px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
-  animation: system-pop 420ms ease;
+  gap: 4px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
+  animation: system-pop 280ms ease;
 }
-.system-kicker { color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
-.system-toast strong { font-family: var(--font-barlow), sans-serif; font-size: 40px; line-height: 0.9; }
-.system-toast p { margin: 0 0 8px; font-weight: 700; }
-@keyframes system-pop { from { transform: translateY(12px) scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
+.system-still { animation: none; }
+.system-kicker { color: #ff3b3b; font-size: 12px; font-weight: 800; letter-spacing: 0.14em; }
+.system-panel strong { font-size: 18px; line-height: 1.25; }
+.unread {
+  display: inline-grid;
+  place-items: center;
+  min-width: 22px;
+  height: 22px;
+  margin-left: 8px;
+  border-radius: 99px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 12px;
+}
+.log-row { display: grid; grid-template-columns: 52px 1fr; gap: 8px; align-items: start; }
+.log-row span { color: var(--muted); font-size: 12px; font-weight: 700; }
+.log-row p { margin: 0; font-weight: 700; }
+.log-new p { color: var(--accent); }
+@keyframes system-pop { from { transform: translateY(10px); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) {
-  .system-toast { animation: none; }
+  .system-panel { animation: none; }
 }

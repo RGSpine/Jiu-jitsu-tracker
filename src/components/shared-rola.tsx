@@ -11,7 +11,7 @@ export function SharedRola({ rolaId }: { rolaId: string }) {
   const app = useApp();
   const [rola, setRola] = useState<PerspectiveRola | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
-  const [badge, setBadge] = useState<{ level: number; title: string } | null>(null);
+  const [badge, setBadge] = useState<{ level: number; title: string; epithet: string } | null>(null);
 
   useEffect(() => {
     let alive = true;
@@ -43,7 +43,7 @@ export function SharedRola({ rolaId }: { rolaId: string }) {
         <p className="eyebrow">{formatDate(rola.occurredOn)}</p>
         <h1>{rola.opponentName}</h1>
         <p className="lede">{modalityLabel(rola.modality)} · {rola.durationMinutes} min</p>
-        {badge ? <p className="equipped">Nível {badge.level}{badge.title ? ` · ${badge.title}` : ""}</p> : null}
+        {badge ? <p className="equipped">Nível {badge.level}{badge.epithet ? ` · ${rola.opponentName.split(" ")[0]}, ${badge.epithet}` : ""}{badge.title ? ` · ${badge.title}` : ""}</p> : null}
       </header>
       <div className="pad stack">
         {rola.ownedByMe ? (

@@ -3,10 +3,10 @@
 import { useApp } from "@/components/providers";
 import { todayIso } from "@/lib/dates";
 import { factsHold } from "@/lib/insights";
-import { buildProgress, titleFor, type ProgressRola, type ProgressView, type SystemEvent } from "@/lib/progression";
+import { buildProgress, epithetFor, presentation, titleFor, type ProgressRola, type ProgressView, type SystemEvent, type SystemLogEntry } from "@/lib/progression";
 import type { PerspectiveRola } from "@/lib/types";
 import { useEffect, useState } from "react";
-import { SystemToast } from "@/components/system-toast";
+import { rememberProgress, SystemToast } from "@/components/system-toast";
 
 export function ProfileProgress() {
   const app = useApp();
@@ -14,15 +14,26 @@ export function ProfileProgress() {
   const [lines, setLines] = useState<string[] | null>(null);
   const [share, setShare] = useState(Boolean(app.profile?.shareProgress));
   const [titleId, setTitleId] = useState<string | null>(app.profile?.equippedTitleId ?? null);
+  const [epithetId, setEpithetId] = useState<string | null>(app.profile?.equippedEpithetId ?? null);
+  const [log, setLog] = useState<SystemLogEntry[]>([]);
+  const [unread, setUnread] = useState(0);
   const [preview, setPreview] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setPreview(new URLSearchParams(window.location.search).get("sistema")), 0);
     let alive = true;
-    void app.rolas().then((rolas) => {
+    void app.rolas().then(async (rolas) => {
       if (!alive) return;
-      setView(buildProgress(rolas.map(asProgress), todayIso()));
+      const next = buildProgress(rolas.map(asProgress), todayIso());
+      setView(next);
+      const announced = await app.syncLog(next.log);
+      if (!alive) return;
+      if (announced.length) rememberProgress(announced.map((entry) => ({ id: entry.id, kind: entry.kind, body: entry.body })));
+      const stored = await app.loadLog();
+      if (!alive) return;
+      setLog(stored);
+      setUnread(stored.filter((entry) => !entry.read).length);
     }).catch(() => undefined);
     return () => {
       alive = false;
@@ -50,8 +61,9 @@ export function ProfileProgress() {
     };
   }, [view]);
 
-  if (!view) return <div className="skeleton" />;
+  if (!view || !app.profile) return <div className="skeleton" />;
   const equipped = titleFor(view, titleId);
+  const epithet = epithetFor(view, epithetId);
   const previewEvents = previewEventsFor(preview, view);
 
   async function savePost() {
@@ -62,6 +74,8 @@ export function ProfileProgress() {
         equippedTitleId: titleId,
         publicLevel: view!.level,
         publicTitle: titleFor(view!, titleId) ?? "",
+        equippedEpithetId: epithetId,
+        publicEpithet: epithetFor(view!, epithetId) ?? "",
         seenUnlocks: [],
       });
       setNote("Posto salvo.");
@@ -85,10 +99,11 @@ export function ProfileProgress() {
           <span style={{ width: `${Math.min(100, (view.into / view.need) * 100)}%` }} />
         </div>
         <p className="sub">{view.into}/{view.need} XP · posto de jogo, não é a faixa</p>
-        {equipped ? <p className="equipped">{equipped}</p> : null}
+        <p className="equipped">{presentation(app.profile.displayName, epithet)}</p>
+        {equipped ? <p className="sub">{equipped}</p> : null}
       </article>
 
-      <Radar items={view.attributes.map((item) => ({ label: item.label, level: item.level }))} />
+      <Radar items={view.attributes.map((item) => ({ label: item.short, level: item.level }))} />
 
       <section className="stack" aria-label="Missões">
         <h2>Missões</h2>
@@ -106,14 +121,25 @@ export function ProfileProgress() {
       <section aria-label="Habilidades">
         <h2>Habilidades</h2>
         <div className="skill-grid">
-          {view.skills.map((skill) => (
-            <article key={skill.id} className={skill.unlocked ? "skill-on" : "skill-off"}>
-              <span className="skill-mark" aria-hidden="true">{skill.unlocked ? "▲" : ""}</span>
-              <strong>{skill.unlocked ? skill.name : "???"}</strong>
-              <span>{skill.unlocked ? skill.title : skill.hint}</span>
+          {view.lines.map((line) => (
+            <article key={line.id} className={line.unlocked ? "skill-on" : "skill-off"}>
+              <span className="skill-mark" aria-hidden="true">{line.unlocked ? "▲".repeat(Math.max(1, line.tier)) : ""}</span>
+              <strong>{line.name}</strong>
+              <span>{line.unlocked ? line.hint : line.hidden ? "???" : line.hint}</span>
             </article>
           ))}
         </div>
+      </section>
+
+      <section id="registro" className="stack" aria-label="Registro do Sistema">
+        <h2>Registro {unread > 0 ? <span className="unread">{unread}</span> : null}</h2>
+        {log.length === 0 ? <p className="sub">Sem avisos ainda.</p> : log.slice().reverse().slice(0, 8).map((entry) => (
+          <article key={entry.id} className={`log-row${entry.read ? "" : " log-new"}`}>
+            <span>{entry.occurredOn.slice(8)}/{entry.occurredOn.slice(5, 7)}</span>
+            <p>{entry.body.replace("[SISTEMA] ", "")}</p>
+          </article>
+        ))}
+        {unread > 0 ? <button className="linkish" type="button" onClick={() => void app.markLogRead().then(() => { setUnread(0); setLog(log.map((entry) => ({ ...entry, read: true }))); })}>Marcar lido</button> : null}
       </section>
 
       <label className="field">
@@ -121,6 +147,13 @@ export function ProfileProgress() {
         <select value={titleId ?? ""} onChange={(event) => setTitleId(event.target.value || null)}>
           <option value="">Automático</option>
           {view.titles.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+        </select>
+      </label>
+      <label className="field">
+        <span>Epíteto</span>
+        <select value={epithetId ?? ""} onChange={(event) => setEpithetId(event.target.value || null)}>
+          <option value="">Automático</option>
+          {view.epithets.filter((item) => item.unlocked).map((item) => <option key={item.id} value={item.id}>{item.label}</option>)}
         </select>
       </label>
       <label className="share-row">
@@ -147,17 +180,17 @@ function asProgress(rola: PerspectiveRola): ProgressRola {
 }
 
 function previewEventsFor(preview: string | null, view: ProgressView): SystemEvent[] | undefined {
-  if (preview === "nivel") return [{ id: "preview-nivel", kind: "nivel", title: `Nível ${view.level}`, text: view.rank }];
-  if (preview === "habilidade") {
-    const skill = view.skills.find((item) => item.unlocked);
-    if (!skill) return undefined;
-    return [{ id: skill.id, kind: "habilidade", title: skill.title, text: skill.name }];
+  if (!preview) return undefined;
+  const title = view.titles.find((item) => item.title === "Trator Humano") ?? view.titles.at(-1);
+  const epithet = view.epithets.find((item) => item.unlocked);
+  if (preview === "fila") {
+    return [
+      title ? { id: "preview-titulo", kind: "titulo", body: `[SISTEMA] Novo título adquirido: ${title.title}` } : { id: "preview-posto", kind: "posto", body: `[SISTEMA] Novo posto: ${view.rank}` },
+      epithet ? { id: "preview-epiteto", kind: "epiteto", body: `[SISTEMA] Novo epíteto: ${epithet.label}` } : { id: "preview-nivel", kind: "posto", body: `[SISTEMA] Novo posto: ${view.rank}` },
+    ];
   }
-  if (preview === "missao") {
-    const quest = view.quests.find((item) => item.done) ?? view.quests[0];
-    if (!quest) return undefined;
-    return [{ id: quest.id, kind: "missao", title: "Missão", text: quest.text }];
-  }
+  if (preview === "titulo" && title) return [{ id: title.id, kind: "titulo", body: `[SISTEMA] Novo título adquirido: ${title.title}` }];
+  if (preview === "nivel") return [{ id: "preview-posto", kind: "posto", body: `[SISTEMA] Novo posto: ${view.rank}` }];
   return undefined;
 }
 
