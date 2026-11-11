@@ -90,32 +90,32 @@ export type TitleLine = { id: string; label: string; hidden: boolean; tiers: Tit
 export const TITLE_LINES: TitleLine[] = [
   { id: "queda", label: "Queda", hidden: false, tiers: [
     { id: "quedador-1", name: "Quedador", hint: "8 quedas", rule: { type: "attr", attribute: "queda", atLeast: 8 } },
-    { id: "quedador-2", name: "Quedador firme", hint: "25 quedas", rule: { type: "attr", attribute: "queda", atLeast: 25 } },
+    { id: "quedador-2", name: "Wrestler", hint: "25 quedas", rule: { type: "attr", attribute: "queda", atLeast: 25 } },
     { id: "quedador-3", name: "Mão de queda", hint: "60 quedas", rule: { type: "attr", attribute: "queda", atLeast: 60 } },
   ] },
   { id: "passagem", label: "Passagem", hidden: false, tiers: [
     { id: "passador-1", name: "Passador", hint: "12 passagens", rule: { type: "attr", attribute: "passagem", atLeast: 12 } },
-    { id: "passador-2", name: "Passador fundo", hint: "35 passagens", rule: { type: "attr", attribute: "passagem", atLeast: 35 } },
+    { id: "passador-2", name: "Atropelador", hint: "35 passagens", rule: { type: "attr", attribute: "passagem", atLeast: 35 } },
     { id: "passador-3", name: "Trator Humano", hint: "80 passagens", rule: { type: "attr", attribute: "passagem", atLeast: 80 } },
   ] },
   { id: "raspagem", label: "Raspagem", hidden: false, tiers: [
     { id: "raspador-1", name: "Raspador", hint: "8 raspagens", rule: { type: "attr", attribute: "raspagem", atLeast: 8 } },
-    { id: "raspador-2", name: "Raspador fundo", hint: "25 raspagens", rule: { type: "attr", attribute: "raspagem", atLeast: 25 } },
+    { id: "raspador-2", name: "Tesourinha", hint: "25 raspagens", rule: { type: "attr", attribute: "raspagem", atLeast: 25 } },
     { id: "raspador-3", name: "Onda", hint: "55 raspagens", rule: { type: "attr", attribute: "raspagem", atLeast: 55 } },
   ] },
   { id: "guarda", label: "Guarda", hidden: false, tiers: [
     { id: "guardeiro-1", name: "Guardeiro", hint: "8 guardas", rule: { type: "attr", attribute: "guarda", atLeast: 8 } },
-    { id: "guardeiro-2", name: "Guardeiro fundo", hint: "24 guardas", rule: { type: "attr", attribute: "guarda", atLeast: 24 } },
-    { id: "guardeiro-3", name: "Casa", hint: "50 guardas", rule: { type: "attr", attribute: "guarda", atLeast: 50 } },
+    { id: "guardeiro-2", name: "Guarda Impassável", hint: "24 guardas", rule: { type: "attr", attribute: "guarda", atLeast: 24 } },
+    { id: "guardeiro-3", name: "A Muralha", hint: "50 guardas", rule: { type: "attr", attribute: "guarda", atLeast: 50 } },
   ] },
   { id: "defesa", label: "Defesa", hidden: false, tiers: [
-    { id: "defesa-1", name: "Muro", hint: "12 saídas", rule: { type: "attr", attribute: "defesa", atLeast: 12 } },
-    { id: "defesa-2", name: "Guarda Impassável", hint: "20 rolas e pouca finalização sofrida", rule: { type: "impassable", rolas: 20, maxRate: 0.2, escapes: 12 } },
-    { id: "defesa-3", name: "O Impassável", hint: "40 rolas e quase não apanha finalização", rule: { type: "impassable", rolas: 40, maxRate: 0.12, escapes: 20 } },
+    { id: "defesa-1", name: "Escapista", hint: "12 saídas", rule: { type: "attr", attribute: "defesa", atLeast: 12 } },
+    { id: "defesa-2", name: "Blindado", hint: "20 rolas e pouca finalização sofrida", rule: { type: "impassable", rolas: 20, maxRate: 0.2, escapes: 12 } },
+    { id: "defesa-3", name: "O Inquebrável", hint: "40 rolas e quase não apanha finalização", rule: { type: "impassable", rolas: 40, maxRate: 0.12, escapes: 20 } },
   ] },
   { id: "costas", label: "Costas", hidden: false, tiers: [
     { id: "costas-1", name: "Pegada", hint: "5 pegadas nas costas", rule: { type: "backs", atLeast: 5 } },
-    { id: "costas-2", name: "Costas firmes", hint: "15 pegadas nas costas", rule: { type: "backs", atLeast: 15 } },
+    { id: "costas-2", name: "Mochila", hint: "15 pegadas nas costas", rule: { type: "backs", atLeast: 15 } },
     { id: "costas-3", name: "Dono das costas", hint: "35 pegadas nas costas", rule: { type: "backs", atLeast: 35 } },
   ] },
   { id: "pes", label: "Ataque de pés", hidden: false, tiers: [
@@ -125,17 +125,17 @@ export const TITLE_LINES: TitleLine[] = [
   ] },
   { id: "estrangulamento", label: "Estrangulamento", hidden: false, tiers: [
     { id: "neck-1", name: "Estrangulador", hint: "5 estrangulamentos", rule: { type: "chokes", atLeast: 5 } },
-    { id: "neck-2", name: "Estrangulador fundo", hint: "15 estrangulamentos", rule: { type: "chokes", atLeast: 15 } },
+    { id: "neck-2", name: "Gravata", hint: "15 estrangulamentos", rule: { type: "chokes", atLeast: 15 } },
     { id: "neck-3", name: "Laço fechado", hint: "35 estrangulamentos", rule: { type: "chokes", atLeast: 35 } },
   ] },
   { id: "pontuacao", label: "Pontuação", hidden: false, tiers: [
     { id: "pts-1", name: "Pontuador", hint: "30 pontos", rule: { type: "points", atLeast: 30 } },
-    { id: "pts-2", name: "Pontuador fundo", hint: "100 pontos", rule: { type: "points", atLeast: 100 } },
+    { id: "pts-2", name: "Artilheiro", hint: "100 pontos", rule: { type: "points", atLeast: 100 } },
     { id: "pts-3", name: "Placar alto", hint: "250 pontos", rule: { type: "points", atLeast: 250 } },
   ] },
   { id: "final", label: "Finalização", hidden: false, tiers: [
     { id: "fin-1", name: "Finalizador", hint: "10 finalizações", rule: { type: "subs", atLeast: 10 } },
-    { id: "fin-2", name: "Finalizador fundo", hint: "30 finalizações", rule: { type: "subs", atLeast: 30 } },
+    { id: "fin-2", name: "Matador", hint: "30 finalizações", rule: { type: "subs", atLeast: 30 } },
     { id: "fin-3", name: "Ceifador", hint: "60 finalizações", rule: { type: "subs", atLeast: 60 } },
   ] },
   { id: "rotina", label: "Presença", hidden: false, tiers: [
