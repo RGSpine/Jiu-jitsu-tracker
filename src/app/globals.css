@@ -497,3 +497,57 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 8px 0; }
 }
 .install-arrow { color: var(--muted); font-weight: 800; }
 .install-line { margin: 0; font-size: 13px; font-weight: 650; }
+.rank-card { display: flex; flex-direction: column; gap: 8px; }
+.rank-badge {
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+.xp-track { height: 10px; border-radius: 99px; background: var(--soft); overflow: hidden; border: 1px solid var(--line); }
+.xp-track span { display: block; height: 100%; background: var(--accent); }
+.equipped { margin: 0; font-weight: 800; }
+.radar { margin: 0; }
+.radar svg { width: 100%; height: auto; }
+.radar-ring { fill: none; stroke: var(--line); stroke-width: 1; }
+.radar-fill { fill: var(--accent); fill-opacity: 0.28; stroke: var(--accent); stroke-width: 2; }
+.radar text { fill: var(--ink); font-size: 10px; font-weight: 700; }
+.skill-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.skill-on, .skill-off {
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  min-height: 92px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  background: var(--paper);
+}
+.skill-on { border-color: var(--accent); }
+.skill-off { opacity: 0.55; }
+.skill-mark { color: var(--accent); font-weight: 800; min-height: 1em; }
+.quest { border: 1px solid var(--line); border-radius: 16px; padding: 12px; display: flex; flex-direction: column; gap: 8px; background: var(--paper); }
+.share-row { display: flex; gap: 10px; align-items: center; font-weight: 700; }
+.system-layer { position: fixed; left: 0; right: 0; bottom: 88px; display: flex; justify-content: center; z-index: 30; padding: 0 12px; }
+.system-toast {
+  width: min(420px, 100%);
+  background: var(--bg);
+  color: var(--ink);
+  border: 2px solid var(--accent);
+  border-radius: 18px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.28);
+  animation: system-pop 420ms ease;
+}
+.system-kicker { color: var(--accent); font-size: 12px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+.system-toast strong { font-family: var(--font-barlow), sans-serif; font-size: 40px; line-height: 0.9; }
+.system-toast p { margin: 0 0 8px; font-weight: 700; }
+@keyframes system-pop { from { transform: translateY(12px) scale(0.96); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .system-toast { animation: none; }
+}

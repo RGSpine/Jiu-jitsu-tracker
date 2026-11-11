@@ -383,6 +383,34 @@ export function browserRepository() {
         fail(error, "Não foi possível gravar os treinos de exemplo.");
       }
     },
+    async saveProgress(patch: {
+      shareProgress: boolean;
+      equippedTitleId: string | null;
+      publicLevel: number;
+      publicTitle: string;
+      seenUnlocks: string[];
+    }) {
+      const user = await currentUser();
+      if (!user) throw new Error("Entre na sua conta para continuar.");
+      const { error } = await supabase.from("progression").upsert({
+        user_id: user.id,
+        share_progress: patch.shareProgress,
+        equipped_title_id: patch.equippedTitleId,
+        public_level: patch.publicLevel,
+        public_title: patch.publicTitle,
+        seen_unlocks: patch.seenUnlocks,
+      });
+      fail(error, "Não foi possível salvar a progressão.");
+    },
+    async publicBadge(userId: string): Promise<{ level: number; title: string } | null> {
+      const { data, error } = await supabase
+        .from("progression")
+        .select("public_level, public_title, share_progress")
+        .eq("user_id", userId)
+        .maybeSingle();
+      if (error || !data?.share_progress) return null;
+      return { level: data.public_level as number, title: (data.public_title as string) ?? "" };
+    },
     async signIn(email: string, password: string) {
       const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
       if (error) throw new Error(error.message);

@@ -1,7 +1,8 @@
 "use client";
 
+import { ProfileProgress } from "@/components/profile-progress";
 import { useApp } from "@/components/providers";
-import { BELT_OPTIONS, beltLabel, modalityLabel } from "@/lib/labels";
+import { BELT_OPTIONS, beltLabel } from "@/lib/labels";
 import type { Belt, Modality } from "@/lib/types";
 import { useEffect, useState } from "react";
 
@@ -59,8 +60,11 @@ function ProfileForm() {
       <header className="mast">
         <p className="eyebrow">Perfil</p>
         <h1>{profile.displayName}</h1>
-        <p className="lede">{beltLabel(profile.belt)} · {profile.stripes} graus · {modalityLabel(profile.preferredModality)}</p>
+        <p className="lede">Faixa real: {beltLabel(profile.belt)} · {profile.stripes} graus</p>
       </header>
+      <div className="pad stack">
+        <ProfileProgress />
+      </div>
       <form className="pad stack" onSubmit={save}>
         {message ? <div className="banner banner-ok"><p>{message}</p></div> : null}
         {error ? <div className="banner banner-bad"><p>{error}</p></div> : null}

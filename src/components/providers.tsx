@@ -4,13 +4,16 @@ import { techniques } from "@/data/catalog";
 import { federations, scoringRules } from "@/data/rules";
 import { authErrorMessage } from "@/lib/auth-errors";
 import { supabaseConfigured } from "@/lib/config";
+import { todayIso } from "@/lib/dates";
 import {
   demoDeleteSession,
   demoLoadSample,
   demoPerspectives,
   demoProfile,
+  demoPublicBadge,
   demoSaveSession,
   demoSearch,
+  demoUpdateProgress,
   demoSessionDraft,
   demoSessions,
   demoSharedRola,
@@ -68,6 +71,8 @@ type AppContextValue = {
   saveSession: (draft: SessionDraft) => Promise<string>;
   deleteSession: (id: string) => Promise<void>;
   loadSample: () => Promise<void>;
+  saveProgress: (patch: { shareProgress: boolean; equippedTitleId: string | null; publicLevel: number; publicTitle: string; seenUnlocks: string[] }) => Promise<void>;
+  publicBadge: (userId: string) => Promise<{ level: number; title: string } | null>;
 };
 
 const AppContext = createContext<AppContextValue | null>(null);
@@ -253,6 +258,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
         await browserRepository().deleteSession(id);
         setRevision((current) => current + 1);
+      },
+      async saveProgress(patch) {
+        if (!profile) return;
+        if (mode === "demo") {
+          const db = demoUpdateProgress(loadDemoDb(), { shareProgress: patch.shareProgress, equippedTitleId: patch.equippedTitleId });
+          saveDemoDb(db);
+          bump(demoProfile(db), user);
+          return;
+        }
+        await browserRepository().saveProgress(patch);
+      },
+      async publicBadge(userId) {
+        if (mode === "demo") return demoPublicBadge(loadDemoDb(), userId, todayIso());
+        return browserRepository().publicBadge(userId);
       },
       async loadSample() {
         if (!profile) throw new Error("Entre na sua conta para continuar.");

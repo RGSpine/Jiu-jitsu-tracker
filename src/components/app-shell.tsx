@@ -2,6 +2,7 @@
 
 import { AppHeader } from "@/components/app-header";
 import { InstallHint } from "@/components/install-hint";
+import { SystemToast } from "@/components/system-toast";
 import { useApp } from "@/components/providers";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -31,6 +32,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <InstallHint />
           {children}
         </div>
+        <SystemToast />
         <nav className="tabbar" aria-label="Principal">
           {TABS.map((tab) => {
             const active = tab.href === "/treinos/novo"

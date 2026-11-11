@@ -55,6 +55,9 @@ export type Profile = {
   stripes: number;
   academy: string;
   preferredModality: Modality;
+  /** O parceiro vê nível e título só se isto estiver ligado. */
+  shareProgress?: boolean;
+  equippedTitleId?: string | null;
 };
 
 export type RolaAction = {

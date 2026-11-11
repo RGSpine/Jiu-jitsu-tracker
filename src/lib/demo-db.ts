@@ -1,4 +1,5 @@
 import { techniques } from "@/data/catalog";
+import { buildProgress, titleFor } from "@/lib/progression";
 import { defaultFederation } from "@/data/rules";
 import { todayIso } from "@/lib/dates";
 import { draftFromRola, toPerspective } from "@/lib/perspective";
@@ -41,6 +42,7 @@ const SEED_PROFILES: Profile[] = [
     stripes: 2,
     academy: "Academia Sul",
     preferredModality: "nogi",
+    shareProgress: true,
   },
   {
     id: DEMO_ANA_ID,
@@ -89,7 +91,13 @@ export function loadDemoDb(): DemoDb {
   try {
     const parsed = JSON.parse(raw) as DemoDb;
     if (parsed.version !== 1 || !Array.isArray(parsed.profiles)) return createSeed();
-    return parsed;
+    return {
+      ...parsed,
+      profiles: parsed.profiles.map((profile) => ({
+        ...profile,
+        shareProgress: profile.shareProgress ?? profile.id === DEMO_ROBERTO_ID,
+      })),
+    };
   } catch {
     return createSeed();
   }
@@ -141,6 +149,33 @@ export function demoSignUp(
     preferredModality: input.preferredModality,
   };
   return { ...db, currentUserId: profile.id, profiles: [...db.profiles, profile] };
+}
+
+export function demoUpdateProgress(
+  db: DemoDb,
+  patch: { shareProgress?: boolean; equippedTitleId?: string | null },
+): DemoDb {
+  const me = requireUser(db);
+  return {
+    ...db,
+    profiles: db.profiles.map((profile) => profile.id === me.id ? { ...profile, ...patch } : profile),
+  };
+}
+
+export function demoPublicBadge(db: DemoDb, userId: string, today: string): { level: number; title: string } | null {
+  const profile = db.profiles.find((item) => item.id === userId);
+  if (!profile?.shareProgress) return null;
+  const view = buildProgress(db.rolas.filter((rola) => rola.athleteId === userId).map((rola) => ({
+    occurredOn: rola.occurredOn,
+    modality: rola.modality,
+    durationMinutes: rola.durationMinutes,
+    sessionId: rola.sessionId,
+    pointsFor: rola.pointsAthlete,
+    submissionsApplied: rola.actions.filter((action) => action.performer === "self" && action.actionType === "finalizacao").map((action) => ({ id: action.techniqueId })),
+    submissionsSuffered: rola.actions.filter((action) => action.performer === "partner" && action.actionType === "finalizacao").map((action) => ({ id: action.techniqueId })),
+    techniquesUsed: rola.actions.filter((action) => action.performer === "self" && action.actionType === "tecnica").map((action) => ({ id: action.techniqueId })),
+  })), today);
+  return { level: view.level, title: titleFor(view, profile.equippedTitleId) ?? "" };
 }
 
 export function demoUpdateProfile(

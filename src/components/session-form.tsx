@@ -2,6 +2,8 @@
 
 import { useApp } from "@/components/providers";
 import { audioFileName, isIosUserAgent, preferredAudioMime } from "@/lib/audio-file";
+import { buildProgress, diffProgress, type ProgressRola } from "@/lib/progression";
+import { rememberProgress } from "@/components/system-toast";
 import { AUDIO_AI_UNAVAILABLE_MESSAGE, TEXT_AI_UNAVAILABLE_MESSAGE } from "@/lib/config";
 import { suggestPoints } from "@/lib/scoring";
 import { draftFromParsed, type ParsedSession } from "@/lib/parse-draft";
@@ -111,7 +113,11 @@ export function SessionForm({ sessionId }: { sessionId?: string }) {
     setPending(true);
     setError(null);
     try {
+      const beforeRolas = await app.rolas().catch(() => []);
+      const today = draft!.date;
       const id = await app.saveSession(draft!);
+      const afterRolas = await app.rolas().catch(() => beforeRolas);
+      rememberProgress(diffProgress(buildProgress(beforeRolas.map(asProgress), today), buildProgress(afterRolas.map(asProgress), today)));
       router.push(`/treinos/${id}`);
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Não foi possível salvar.");
@@ -277,6 +283,19 @@ export function SessionForm({ sessionId }: { sessionId?: string }) {
       ) : null}
     </div>
   );
+}
+
+function asProgress(rola: { occurredOn: string; modality: ProgressRola["modality"]; durationMinutes: number; sessionId: string; pointsFor: number; submissionsApplied: { id: string }[]; submissionsSuffered: { id: string }[]; techniquesUsed: { id: string; category?: ProgressRola["techniquesUsed"][number]["category"] }[] }): ProgressRola {
+  return {
+    occurredOn: rola.occurredOn,
+    modality: rola.modality,
+    durationMinutes: rola.durationMinutes,
+    sessionId: rola.sessionId,
+    pointsFor: rola.pointsFor,
+    submissionsApplied: rola.submissionsApplied,
+    submissionsSuffered: rola.submissionsSuffered,
+    techniquesUsed: rola.techniquesUsed,
+  };
 }
 
 function Stepper({ label, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
