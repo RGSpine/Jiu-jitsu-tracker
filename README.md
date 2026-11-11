@@ -74,11 +74,10 @@ Preencha:
 | `DEEPSEEK_API_KEY` | Não | Leitura do texto (extração). Sem ela, o formulário manual segue e o texto avisa |
 | `DEEPSEEK_MODEL` | Não | Padrão `deepseek-flash` |
 | `DEEPSEEK_BASE_URL` | Não | Padrão `https://api.deepseek.com` |
-| `STT_PROVIDER` | Não | `openai` (padrão) ou `groq`. A DeepSeek não transcreve áudio |
-| `OPENAI_API_KEY` | Não | Transcrição quando `STT_PROVIDER=openai` |
-| `OPENAI_TRANSCRIBE_MODEL` | Não | Padrão `whisper-1`. Também aceita `gpt-4o-transcribe` |
-| `GROQ_API_KEY` | Não | Transcrição quando `STT_PROVIDER=groq` |
-| `GROQ_TRANSCRIBE_MODEL` | Não | Padrão `whisper-large-v3-turbo` |
+| `STT_PROVIDER` | Não | `groq` (padrão) ou `openai`. A DeepSeek não transcreve áudio |
+| `STT_MODEL` | Não | Vazio usa o padrão do provedor: Groq `whisper-large-v3`, OpenAI `gpt-transcribe` |
+| `GROQ_API_KEY` | Não | Transcrição no padrão (`STT_PROVIDER=groq`) |
+| `OPENAI_API_KEY` | Não | Transcrição só se `STT_PROVIDER=openai` |
 
 Não commite `.env.local`. A chave **service_role** não é usada pelo app.
 
@@ -86,11 +85,12 @@ Não commite `.env.local`. A chave **service_role** não é usada pelo app.
 
 A extração do relato usa a API compatível com OpenAI da DeepSeek, em `https://api.deepseek.com/chat/completions`. O id verificado na documentação oficial ([Your First API Call](https://api-docs.deepseek.com/) e [Models & Pricing](https://api-docs.deepseek.com/quick_start/pricing/)) é `deepseek-flash`, servido pelo DeepSeek-V4.1-Flash-1017. O nome antigo `deepseek-v4-flash` foi aposentado e só é aceito como apelido.
 
-A mesma documentação não oferece transcrição de áudio: os modelos aceitam texto e, no Flash, imagem. O áudio fica num provedor separado.
+A mesma documentação não oferece transcrição de áudio: os modelos aceitam texto e, no Flash, imagem. O áudio fica num provedor separado. O padrão é a Groq.
 
 - Texto: `DEEPSEEK_API_KEY`. Opcional `DEEPSEEK_MODEL` (padrão `deepseek-flash`).
-- Áudio com OpenAI: `STT_PROVIDER=openai` e `OPENAI_API_KEY`. O modelo padrão é `whisper-1`; `OPENAI_TRANSCRIBE_MODEL` pode ser `gpt-4o-transcribe`.
-- Áudio com Groq: `STT_PROVIDER=groq` e `GROQ_API_KEY`. O padrão é `whisper-large-v3-turbo`.
+- Áudio, padrão: `STT_PROVIDER=groq` e `GROQ_API_KEY`. O modelo é `whisper-large-v3` (não o turbo), com `language=pt` e uma dica do glossário dentro do limite de 224 tokens do prompt da Groq.
+- Áudio pela OpenAI: `STT_PROVIDER=openai` e `OPENAI_API_KEY`. O modelo padrão é `gpt-transcribe`. Em [Deprecations](https://developers.openai.com/api/docs/deprecations), `whisper-1` e `gpt-4o-transcribe` desligam em 26 de fevereiro de 2027; o guia de transcrição indica `gpt-transcribe` para arquivo já gravado.
+- `STT_MODEL` troca o modelo sem mudar o código. Se ficar vazio, vale o padrão do provedor escolhido.
 
 Os dois caminhos recebem o glossário versionado em `src/data/glossary.ts`: o texto entra no prompt da DeepSeek, a transcrição recebe uma lista curta de termos para enviesar o reconhecimento, e um normalizador local corrige apelidos e erros como "hell hook" e "cross ash" mesmo se o modelo devolver o nome cru. Sem as chaves, texto e áudio mostram um aviso e o formulário manual continua.
 

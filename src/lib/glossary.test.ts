@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { glossary, GLOSSARY_VERSION } from "@/data/glossary";
 import { techniques } from "@/data/catalog";
-import { matchTechnique, sttVocabularyPrompt } from "@/lib/glossary-match";
+import { defaultSttModel } from "@/lib/ai/providers";
+import { matchTechnique, STT_PROMPT_TOKEN_LIMIT, sttVocabularyPrompt } from "@/lib/glossary-match";
 import { normalizeReport } from "@/lib/normalize-report";
 
 describe("glossário", () => {
@@ -28,9 +29,12 @@ describe("glossário", () => {
 
   it("manda um vocabulário curto para a transcrição", () => {
     const prompt = sttVocabularyPrompt();
-    expect(prompt.length).toBeLessThanOrEqual(900);
+    const tokens = prompt.trim().split(/\s+/).filter(Boolean).length;
+    expect(tokens).toBeLessThanOrEqual(STT_PROMPT_TOKEN_LIMIT);
     expect(prompt).toContain("hell hook");
     expect(prompt).toContain("cross ash");
+    expect(defaultSttModel("groq")).toBe("whisper-large-v3");
+    expect(defaultSttModel("openai")).toBe("gpt-transcribe");
   });
 });
 

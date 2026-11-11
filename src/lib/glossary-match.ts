@@ -191,6 +191,13 @@ export function glossaryPrompt(): string {
   return [`Glossário de jiu-jitsu versão ${GLOSSARY_VERSION}.`, "Nos campos de técnica, devolva só o id canônico da primeira coluna.", ...lines].join("\n");
 }
 
+function tokenCount(value: string): number {
+  return value.trim().split(/\s+/).filter(Boolean).length;
+}
+
+/** Groq documenta o prompt do Whisper em no máximo 224 tokens. */
+export const STT_PROMPT_TOKEN_LIMIT = 224;
+
 export function sttVocabularyPrompt(): string {
   const extras = glossary.flatMap((entry) => entry.misspellings.slice(0, 1));
   const ordered = [...STT_PRIORITY, ...extras];
@@ -198,12 +205,12 @@ export function sttVocabularyPrompt(): string {
   for (const term of ordered) {
     if (!unique.includes(term)) unique.push(term);
   }
-  const lead = "Relato de jiu-jitsu no tatame. Termos: ";
-  let body = "";
+  const lead = "Relato de jiu-jitsu no tatame. Termos:";
+  const selected: string[] = [];
   for (const term of unique) {
-    const next = body ? `${body}, ${term}` : term;
-    if ((lead + next).length > 850) break;
-    body = next;
+    const candidate = `${lead} ${[...selected, term].join(", ")}.`;
+    if (tokenCount(candidate) > STT_PROMPT_TOKEN_LIMIT - 24) break;
+    selected.push(term);
   }
-  return `${lead}${body}.`;
+  return `${lead} ${selected.join(", ")}.`;
 }

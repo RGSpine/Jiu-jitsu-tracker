@@ -2,14 +2,8 @@ import { glossaryPrompt, sttVocabularyPrompt } from "@/lib/glossary-match";
 
 export const DEFAULT_DEEPSEEK_MODEL = "deepseek-flash";
 export const DEFAULT_DEEPSEEK_BASE_URL = "https://api.deepseek.com";
-export const DEFAULT_OPENAI_TRANSCRIBE_MODEL = "whisper-1";
-export const DEFAULT_GROQ_TRANSCRIBE_MODEL = "whisper-large-v3-turbo";
-
-export const TEXT_AI_UNAVAILABLE_MESSAGE =
-  "A leitura de texto não está configurada. Dá para anotar o treino no formulário. Quem administra o app pode definir DEEPSEEK_API_KEY.";
-
-export const AUDIO_AI_UNAVAILABLE_MESSAGE =
-  "A transcrição não está configurada. A DeepSeek não transcreve áudio; é preciso OPENAI_API_KEY ou GROQ_API_KEY. Dá para escrever o relato ou preencher o formulário.";
+export const DEFAULT_GROQ_TRANSCRIBE_MODEL = "whisper-large-v3";
+export const DEFAULT_OPENAI_TRANSCRIBE_MODEL = "gpt-transcribe";
 
 export type SttProviderName = "openai" | "groq";
 
@@ -18,7 +12,17 @@ export function extractionConfigured(): boolean {
 }
 
 export function sttProviderName(): SttProviderName {
-  return process.env.STT_PROVIDER?.toLowerCase() === "groq" ? "groq" : "openai";
+  return process.env.STT_PROVIDER?.toLowerCase() === "openai" ? "openai" : "groq";
+}
+
+export function defaultSttModel(provider: SttProviderName = sttProviderName()): string {
+  return provider === "openai" ? DEFAULT_OPENAI_TRANSCRIBE_MODEL : DEFAULT_GROQ_TRANSCRIBE_MODEL;
+}
+
+export function sttModel(): string {
+  const override = process.env.STT_MODEL?.trim();
+  if (override) return override;
+  return defaultSttModel();
 }
 
 export function sttConfigured(): boolean {
@@ -88,39 +92,30 @@ export async function extractWithDeepSeek(text: string): Promise<unknown> {
 
 export async function transcribeAudio(audio: File): Promise<string> {
   const provider = sttProviderName();
+  const model = sttModel();
   const prompt = sttVocabularyPrompt();
-  if (provider === "groq") {
-    const outbound = new FormData();
-    outbound.append("file", audio, audio.name || "rola.webm");
-    outbound.append("model", process.env.GROQ_TRANSCRIBE_MODEL || DEFAULT_GROQ_TRANSCRIBE_MODEL);
-    outbound.append("language", "pt");
-    outbound.append("prompt", prompt);
-    const response = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${process.env.GROQ_API_KEY}` },
-      body: outbound,
-    });
-    if (!response.ok) {
-      console.error(await response.text());
-      throw new Error("groq");
-    }
-    const payload = (await response.json()) as { text?: string };
-    return payload.text ?? "";
-  }
-
+  const endpoint = provider === "groq"
+    ? "https://api.groq.com/openai/v1/audio/transcriptions"
+    : "https://api.openai.com/v1/audio/transcriptions";
+  const apiKey = provider === "groq" ? process.env.GROQ_API_KEY : process.env.OPENAI_API_KEY;
   const outbound = new FormData();
   outbound.append("file", audio, audio.name || "rola.webm");
-  outbound.append("model", process.env.OPENAI_TRANSCRIBE_MODEL || DEFAULT_OPENAI_TRANSCRIBE_MODEL);
-  outbound.append("language", "pt");
+  outbound.append("model", model);
   outbound.append("prompt", prompt);
-  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+  outbound.append("response_format", "json");
+  if (provider === "openai" && model === "gpt-transcribe") {
+    outbound.append("languages", JSON.stringify(["pt"]));
+  } else {
+    outbound.append("language", "pt");
+  }
+  const response = await fetch(endpoint, {
     method: "POST",
-    headers: { Authorization: `Bearer ${process.env.OPENAI_API_KEY}` },
+    headers: { Authorization: `Bearer ${apiKey}` },
     body: outbound,
   });
   if (!response.ok) {
     console.error(await response.text());
-    throw new Error("openai");
+    throw new Error(provider);
   }
   const payload = (await response.json()) as { text?: string };
   return payload.text ?? "";
