@@ -71,7 +71,7 @@ export async function POST(request: Request) {
   }
 
   const system = `Você converte relatos de treino de jiu-jitsu, em português do Brasil, para JSON.
-Use o vocabulário do tatame: rola, raspagem, passagem de guarda, queda, finalização, vantagem, punição, montada, pegada nas costas, joelho na barriga.
+Use o vocabulário do tatame. Rola é masculino: o rola, os rolas. Também use raspagem, passagem de guarda, queda, finalização, vantagem, punição, montada, pegada nas costas e joelho na barriga.
 Responda só JSON neste formato:
 {
   "date": "AAAA-MM-DD ou null se não der para saber",
@@ -95,7 +95,7 @@ Responda só JSON neste formato:
   ]
 }
 Regras:
-- Uma rola por round. "5 rolas de 6 min" vira 5 itens se os parceiros não forem nomeados; se só alguns nomes aparecerem, crie as rolas nomeadas e complete as outras com partnerName vazio.
+- Um rola por round. "5 rolas de 6 min" vira 5 itens se os parceiros não forem nomeados; se só alguns nomes aparecerem, crie os rolas nomeados e complete os outros com partnerName vazio.
 - "4 a 2" ou "4x2": o primeiro número é pointsFor e o segundo é pointsAgainst, salvo se o texto disser o contrário.
 - Kimono = gi. No-gi, sem kimono ou nogi = nogi.
 - Não invente finalização que não esteja no texto.

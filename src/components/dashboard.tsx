@@ -96,7 +96,7 @@ export function Dashboard() {
         <h1>E aí, {app.profile.displayName.split(" ")[0]}</h1>
         <p className="lede">
           {summary.rolas === 0
-            ? "Nenhuma rola neste recorte."
+            ? "Nenhum rola neste recorte."
             : `${summary.rolas} rolas ${period === "semana" ? "nesta semana" : period === "mes" ? "neste mês" : period === "semestre" ? "neste semestre" : period === "ano" ? "neste ano" : "no histórico"}.`}
         </p>
       </header>
@@ -207,7 +207,7 @@ export function Dashboard() {
             </section>
 
             <section>
-              <div className="spread mb"><h2>Últimas rolas</h2><Link href="/treinos">Ver treinos</Link></div>
+              <div className="spread mb"><h2>Últimos rolas</h2><Link href="/treinos">Ver treinos</Link></div>
               <div className="list">
                 {rolas.slice(0, 4).map((rola) => (
                   <Link key={rola.id} href={rola.ownedByMe ? `/treinos/${rola.sessionId}` : `/rolas/${rola.id}`} className="card">

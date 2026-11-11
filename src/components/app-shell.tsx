@@ -1,6 +1,6 @@
 "use client";
 
-import { Mark } from "@/components/mark";
+import { AppHeader } from "@/components/app-header";
 import { useApp } from "@/components/providers";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -25,6 +25,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="stage">
       <div className="phone">
+        <AppHeader />
         <div className="phone-main">
           {children}
         </div>
@@ -38,7 +39,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
             const className = `tab${active ? " tab-active" : ""}${tab.href === "/treinos/novo" ? " tab-new" : ""}`;
             return (
               <Link key={tab.href} href={tab.href} className={className}>
-                {tab.href === "/painel" ? <Mark size={18} /> : null}
                 <strong>{tab.label}</strong>
               </Link>
             );
@@ -53,6 +53,7 @@ export function Frame({ children }: { children: React.ReactNode }) {
   return (
     <div className="stage">
       <div className="phone">
+        <AppHeader />
         <div className="phone-main">{children}</div>
       </div>
     </div>

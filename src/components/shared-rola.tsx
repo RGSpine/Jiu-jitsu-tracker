@@ -19,7 +19,7 @@ export function SharedRola({ rolaId }: { rolaId: string }) {
         if (alive) setRola(data);
       })
       .catch((caught: unknown) => {
-        if (alive) setError(caught instanceof Error ? caught.message : "Não foi possível abrir a rola.");
+        if (alive) setError(caught instanceof Error ? caught.message : "Não foi possível abrir o rola.");
       });
     return () => {
       alive = false;
@@ -28,7 +28,7 @@ export function SharedRola({ rolaId }: { rolaId: string }) {
 
   if (error) return <div className="pad mt"><div className="banner banner-bad"><p>{error}</p></div></div>;
   if (rola === undefined) return <div className="pad mt"><div className="skeleton" /></div>;
-  if (!rola) return <div className="pad mt"><div className="banner banner-bad"><p>Rola não encontrada.</p></div></div>;
+  if (!rola) return <div className="pad mt"><div className="banner banner-bad"><p>Rola não encontrado.</p></div></div>;
 
   return (
     <div>
@@ -39,10 +39,10 @@ export function SharedRola({ rolaId }: { rolaId: string }) {
       </header>
       <div className="pad stack">
         {rola.ownedByMe ? (
-          <div className="banner banner-ok"><p>Você registrou esta rola. <Link href={`/treinos/${rola.sessionId}`}>Abrir o treino para editar.</Link></p></div>
+          <div className="banner banner-ok"><p>Você registrou este rola. <Link href={`/treinos/${rola.sessionId}`}>Abrir o treino para editar.</Link></p></div>
         ) : (
           <div className="banner">
-            <p>Registrada por {rola.athleteName}. Aqui o resultado está do seu lado: vitória e derrota trocam, pontos e finalizações também.</p>
+            <p>Registrado por {rola.athleteName}. Aqui o resultado está do seu lado: vitória e derrota trocam, pontos e finalizações também.</p>
           </div>
         )}
         <article className="card">

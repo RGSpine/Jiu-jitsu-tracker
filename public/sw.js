@@ -1,4 +1,4 @@
-const CACHE = "tatame-v1";
+const CACHE = "tatame-v2";
 const PRECACHE = ["/offline.html", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (event) => {

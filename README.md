@@ -1,6 +1,6 @@
 # Tatame
 
-Diário de treinos de jiu-jitsu para anotar no celular depois da rola. A primeira versão cobre conta, perfil, treino com rolas, três jeitos de preencher (formulário, texto e áudio), parceiro vinculado, pontuação IBJJF e um painel da evolução.
+Diário de treinos de jiu-jitsu para anotar no celular depois do rola. A primeira versão cobre conta, perfil, treino com rolas, três jeitos de preencher (formulário, texto e áudio), parceiro vinculado, pontuação IBJJF e um painel da evolução.
 
 A interface está em português do Brasil e usa o vocabulário do tatame: rola, raspagem, passagem de guarda, queda, finalização, vantagem, punição, montada, pegada nas costas, joelho na barriga.
 
@@ -10,10 +10,10 @@ Sem as chaves do Supabase, o app abre em **modo demonstração**: os dados ficam
 
 - Criar conta e entrar com e-mail e senha, ou com link mágico.
 - Perfil com nome, faixa, graus, academia e modalidade preferida (kimono ou no-gi).
-- Anotar um treino com data, modalidade e várias rolas.
+- Anotar um treino com data, modalidade e vários rolas.
 - Em cada rola: duração, parceiro, resultado, pontos, vantagens, punições, finalizações e técnicas.
 - Três entradas que terminam no mesmo formulário, sempre com revisão antes de salvar.
-- Parceiro cadastrado: a mesma rola aparece no histórico dele, com resultado, pontos e finalizações invertidos.
+- Parceiro cadastrado: o mesmo rola aparece no histórico dele, com resultado, pontos e finalizações invertidos.
 - Busca de parceiro por nome ou e-mail, sem mostrar estatística de ninguém.
 - Painel com volume, taxa de vitória, finalizações, categorias, técnicas mais e menos usadas, e comparação com o período anterior.
 - Regras da IBJJF em tabela, para outra federação entrar depois como dado.
@@ -86,7 +86,7 @@ npm run dev
 
 Abra `http://localhost:3000`.
 
-Sem Supabase, use **Abrir demonstração**. As contas locais são `roberto@tatame.dev` e `ana@tatame.dev`, com qualquer senha. A Ana vê as rolas do Roberto pelo lado dela.
+Sem Supabase, use **Abrir demonstração**. As contas locais são `roberto@tatame.dev` e `ana@tatame.dev`, com qualquer senha. A Ana vê os rolas do Roberto pelo lado dela.
 
 Com Supabase, crie uma conta de verdade. No perfil, **Carregar treinos de exemplo** grava um histórico fictício na sua conta para o painel não começar vazio. Isso substitui os treinos que você mesmo anotou.
 
@@ -109,9 +109,9 @@ npm run build
 
 O build da Vercel é o padrão do Next.js: `npm run build`.
 
-## Como a rola compartilhada funciona
+## Como o rola compartilhado funciona
 
-Existe **um** registro da rola, não duas cópias. Quem anota é o atleta da perspectiva canônica (`athlete_id`). O parceiro, se tiver conta e for escolhido na busca, entra em `partner_user_id`.
+Existe **um** registro do rola, não duas cópias. Quem anota é o atleta da perspectiva canônica (`athlete_id`). O parceiro, se tiver conta e for escolhido na busca, entra em `partner_user_id`.
 
 A Row Level Security deixa essa linha visível só para os dois. O parceiro não edita e não vê as notas do treino. Na tela dele, o app inverte:
 
@@ -154,12 +154,12 @@ e reaplique o SQL.
 
 ## Privacidade
 
-Cada pessoa vê os próprios treinos e as rolas das quais participou. As políticas estão na migration. Não use a service role no navegador.
+Cada pessoa vê os próprios treinos e os rolas dos quais participou. As políticas estão na migration. Não use a service role no navegador.
 
 ## Estrutura
 
 - `src/app` — telas, manifest e rotas de IA
 - `src/components` — formulário, painel e histórico
-- `src/lib` — pontuação, estatística, perspectiva da rola e modo demonstração
+- `src/lib` — pontuação, estatística, perspectiva do rola e modo demonstração
 - `supabase/migrations` — esquema, RLS e sementes
 - `public/sw.js` — service worker com página offline simples

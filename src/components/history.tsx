@@ -52,7 +52,7 @@ export function History() {
       <header className="mast">
         <p className="eyebrow">Histórico</p>
         <h1>Treinos</h1>
-        <p className="lede">Suas anotações e as rolas que um parceiro vinculado registrou com você.</p>
+        <p className="lede">Suas anotações e os rolas que um parceiro vinculado registrou com você.</p>
       </header>
       <div className="pad stack">
         {entries.length === 0 ? (
@@ -79,7 +79,7 @@ export function History() {
                     <strong>{formatDate(entry.rola.occurredOn)}</strong>
                     <span className="tag tag-clay">Pelo parceiro</span>
                   </div>
-                  <p className="sub">Registrada por {entry.rola.athleteName}. Do seu lado: {resultLabel(entry.rola.result)} · {entry.rola.pointsFor}×{entry.rola.pointsAgainst}</p>
+                  <p className="sub">Registrado por {entry.rola.athleteName}. Do seu lado: {resultLabel(entry.rola.result)} · {entry.rola.pointsFor}×{entry.rola.pointsAgainst}</p>
                 </Link>
               ))}
             </section>

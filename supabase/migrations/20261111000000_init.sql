@@ -139,7 +139,7 @@ create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.handle_new_user();
 
--- Uma rola é um único registro. O atleta que anota é a perspectiva canônica.
+-- Um rola é um único registro. O atleta que anota é a perspectiva canônica.
 -- O parceiro vinculado lê a mesma linha; o app inverte resultado, pontos e finalizações.
 create or replace function public.save_training_session(payload jsonb)
 returns uuid
@@ -165,7 +165,7 @@ begin
     raise exception 'Não autenticado';
   end if;
   if jsonb_typeof(payload->'rolas') <> 'array' or jsonb_array_length(payload->'rolas') < 1 then
-    raise exception 'Adicione pelo menos uma rola';
+    raise exception 'Adicione pelo menos um rola';
   end if;
   if jsonb_array_length(payload->'rolas') > 30 then
     raise exception 'Um treino pode ter no máximo 30 rolas';
@@ -212,7 +212,7 @@ begin
   loop
     v_partner := nullif(r.value->>'partnerUserId', '')::uuid;
     if v_partner = uid then
-      raise exception 'Você não pode registrar uma rola contra si mesmo';
+      raise exception 'Você não pode registrar um rola contra si mesmo';
     end if;
     if v_partner is not null and not exists (select 1 from public.profiles where id = v_partner) then
       raise exception 'Parceiro não encontrado';
@@ -223,7 +223,7 @@ begin
       select display_name into v_partner_name from public.profiles where id = v_partner;
     end if;
     if v_partner_name = '' then
-      raise exception 'Informe o parceiro da rola';
+      raise exception 'Informe o parceiro do rola';
     end if;
     if coalesce(r.value->>'result', '') not in ('vitoria', 'derrota', 'empate', 'sem_resultado') then
       raise exception 'Resultado inválido';

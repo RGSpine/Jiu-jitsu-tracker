@@ -214,7 +214,7 @@ function rolaFromDraft(session: StoredSession, draft: SessionDraft["rolas"][numb
 export function demoSaveSession(db: DemoDb, draft: SessionDraft): { db: DemoDb; id: string } {
   const me = requireUser(db);
   if (draft.rolas.some((rola) => rola.partnerUserId === me.id)) {
-    throw new Error("Você não pode registrar uma rola contra si mesmo.");
+    throw new Error("Você não pode registrar um rola contra si mesmo.");
   }
   const existing = draft.id ? db.sessions.find((session) => session.id === draft.id) : undefined;
   if (draft.id && (!existing || existing.userId !== me.id)) {

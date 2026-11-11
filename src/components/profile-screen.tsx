@@ -109,7 +109,7 @@ function ProfileForm() {
           {confirmSample ? "Confirmar exemplo" : "Carregar treinos de exemplo"}
         </button>
         {app.mode === "demo" ? (
-          <p className="footer-note">Para ver a rola invertida, saia e entre como ana@tatame.dev. A busca por nome não mostra estatística de ninguém.</p>
+          <p className="footer-note">Para ver o rola invertido, saia e entre como ana@tatame.dev. A busca por nome não mostra estatística de ninguém.</p>
         ) : null}
         <p className="footer-note">No celular, use o menu do navegador e escolha Adicionar à Tela de Início para instalar o Tatame.</p>
         <button className="btn btn-danger" type="button" onClick={() => void app.signOut()}>Sair</button>

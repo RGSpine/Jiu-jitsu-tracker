@@ -191,7 +191,7 @@ export function browserRepository() {
         `id, session_id, athlete_id, athlete_name, partner_user_id, partner_name, occurred_on, modality, federation_id, duration_seconds, result, points_athlete, points_partner, advantages_athlete, advantages_partner, penalties_athlete, penalties_partner, actions:rola_actions(technique_id, performer, action_type)`,
       )
       .order("occurred_on", { ascending: false });
-    fail(error, "Não foi possível carregar as rolas.");
+    fail(error, "Não foi possível carregar os rolas.");
     return (data as RolaRow[]).flatMap((row) => {
       const perspective = toPerspective(mapRola(row), user.id, catalog);
       return perspective ? [perspective] : [];
@@ -278,7 +278,7 @@ export function browserRepository() {
           `id, session_id, athlete_id, athlete_name, partner_user_id, partner_name, occurred_on, modality, federation_id, duration_seconds, result, points_athlete, points_partner, advantages_athlete, advantages_partner, penalties_athlete, penalties_partner, actions:rola_actions(technique_id, performer, action_type)`,
         )
         .eq("session_id", sessionId);
-      fail(rolaResult.error, "Não foi possível abrir as rolas.");
+      fail(rolaResult.error, "Não foi possível abrir os rolas.");
       return {
         id: session.id,
         date: session.session_date,
@@ -298,7 +298,7 @@ export function browserRepository() {
         )
         .eq("id", rolaId)
         .maybeSingle();
-      fail(error, "Não foi possível abrir a rola.");
+      fail(error, "Não foi possível abrir o rola.");
       if (!data) return null;
       return toPerspective(mapRola(data as RolaRow), user.id, catalog);
     },

@@ -1,7 +1,6 @@
 "use client";
 
 import { Frame } from "@/components/app-shell";
-import { Mark } from "@/components/mark";
 import { useApp } from "@/components/providers";
 import { BELT_OPTIONS } from "@/lib/labels";
 import type { Belt, Modality } from "@/lib/types";
@@ -20,14 +19,7 @@ export function LandingScreen() {
   return (
     <Frame>
       <div className="hero">
-        <div className="brand-row">
-          <Mark size={48} />
-          <div>
-            <div className="word">TATAME</div>
-            <div className="sub">Diário de jiu-jitsu</div>
-          </div>
-        </div>
-        <h1>Anote a rola antes de esfriar.</h1>
+        <h1>Anote o rola antes de esfriar.</h1>
         <p className="lede">
           Kimono ou no-gi, parceiro, pontuação e finalização. O painel mostra se o seu jogo está andando.
         </p>
@@ -88,10 +80,10 @@ export function LoginScreen({ linkError = false }: { linkError?: boolean }) {
   return (
     <Frame>
       <form className="hero" onSubmit={submit}>
-        <div className="brand-row"><Mark /><h1>Entrar</h1></div>
+        <h1>Entrar</h1>
         {app.mode === "demo" ? (
           <div className="banner">
-            <p>Demonstração local. Use roberto@tatame.dev ou ana@tatame.dev e qualquer senha. A Ana vê as mesmas rolas do outro lado.</p>
+            <p>Demonstração local. Use roberto@tatame.dev ou ana@tatame.dev e qualquer senha. A Ana vê os mesmos rolas do outro lado.</p>
           </div>
         ) : null}
         {error ? <div className="banner banner-bad"><p>{error}</p></div> : null}
@@ -166,7 +158,7 @@ export function SignupScreen() {
   return (
     <Frame>
       <form className="hero" onSubmit={submit}>
-        <div className="brand-row"><Mark /><h1>Criar conta</h1></div>
+        <h1>Criar conta</h1>
         {error ? <div className="banner banner-bad"><p>{error}</p></div> : null}
         {info ? <div className="banner banner-ok"><p>{info}</p></div> : null}
         <label className="field"><span>Nome</span><input required value={displayName} onChange={(event) => setDisplayName(event.target.value)} autoComplete="name" /></label>

@@ -33,7 +33,7 @@ describe("catálogo", () => {
   });
 });
 
-describe("perspectiva da rola", () => {
+describe("perspectiva do rola", () => {
   it("inverte resultado, pontos e finalizações", () => {
     const stored = buildIncomingFromPartner("2026-11-11").rolas[0]!;
     const roberto = toPerspective(stored, DEMO_ROBERTO_ID, techniques);

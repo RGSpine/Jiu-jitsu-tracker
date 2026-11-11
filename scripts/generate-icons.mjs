@@ -46,34 +46,20 @@ function png(size, paint) {
   ]);
 }
 
-function insideRound(x, y, size, radius) {
-  const inset = radius;
-  if (x >= inset && x < size - inset) return true;
-  if (y >= inset && y < size - inset) return true;
-  const corners = [
-    [inset, inset],
-    [size - inset - 1, inset],
-    [inset, size - inset - 1],
-    [size - inset - 1, size - inset - 1],
-  ];
-  return corners.some(([cx, cy]) => (x - cx) ** 2 + (y - cy) ** 2 <= radius ** 2);
-}
-
 function belt(paddingRatio) {
   return (x, y, size) => {
     const pad = Math.round(size * paddingRatio);
-    const inner = size - pad * 2;
     const lx = x - pad;
     const ly = y - pad;
-    if (lx < 0 || ly < 0 || lx >= inner || ly >= inner) return [0, 0, 0, 0];
-    if (!insideRound(lx, ly, inner, inner * 0.22)) return [0, 0, 0, 0];
-    const beltTop = inner * 0.42;
-    const beltHeight = inner * 0.16;
+    const inner = size - pad * 2;
+    if (lx < 0 || ly < 0 || lx >= inner || ly >= inner) return [255, 255, 255, 255];
+    const beltTop = inner * 0.4;
+    const beltHeight = inner * 0.2;
     if (ly >= beltTop && ly < beltTop + beltHeight) {
-      if (lx < inner * 0.46) return [194, 77, 44, 255];
-      return [244, 236, 223, 255];
+      if (lx < inner * 0.22) return [200, 16, 46, 255];
+      return [17, 17, 17, 255];
     }
-    return [20, 53, 44, 255];
+    return [255, 255, 255, 255];
   };
 }
 

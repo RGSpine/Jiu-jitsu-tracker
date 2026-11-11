@@ -56,7 +56,7 @@ export function draftFromParsed(
 
   const nextRolas: RolaDraft[] = rolas.map((rola) => {
     const result = rola.result && RESULTS.has(rola.result) ? rola.result : "sem_resultado";
-    if (!rola.partnerName?.trim()) warnings.push("Uma rola ficou sem o nome do parceiro.");
+    if (!rola.partnerName?.trim()) warnings.push("Um rola ficou sem o nome do parceiro.");
     return {
       localId: makeId(),
       durationMinutes: Math.min(90, Math.max(1, asInt(rola.durationMinutes, 6, 90) || 6)),

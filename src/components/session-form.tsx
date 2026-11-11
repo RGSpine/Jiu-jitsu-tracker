@@ -372,7 +372,7 @@ function Capture({ onParsed }: { onParsed: (parsed: ParsedSession) => void }) {
           <button key={id} type="button" className={`mode${mode === id ? " mode-on" : ""}`} onClick={() => setMode(id)}>{label}</button>
         ))}
       </div>
-      {mode === "manual" ? <p className="sub">Preencha as rolas abaixo. Texto e áudio também caem neste formulário para revisão.</p> : null}
+      {mode === "manual" ? <p className="sub">Preencha os rolas abaixo. Texto e áudio também caem neste formulário para revisão.</p> : null}
       {mode === "texto" ? <TextCapture onParsed={onParsed} /> : null}
       {mode === "audio" ? <AudioCapture onParsed={onParsed} /> : null}
     </section>
@@ -498,7 +498,7 @@ function AudioCapture({ onParsed }: { onParsed: (parsed: ParsedSession) => void 
         </button>
         <div>
           <strong>{recording ? `${seconds}s` : pending ? "Transcrevendo..." : "Até 90 segundos"}</strong>
-          <p className="sub">Fale as rolas. Depois você revisa o texto e o formulário.</p>
+          <p className="sub">Fale os rolas. Depois você revisa o texto e o formulário.</p>
         </div>
       </div>
       <textarea value={text} onChange={(event) => setText(event.target.value)} placeholder="A transcrição aparece aqui." />
