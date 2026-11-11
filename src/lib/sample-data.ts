@@ -82,7 +82,7 @@ export function buildPersonalSample(options: {
   const sessions: StoredSession[] = [];
   const rolas: StoredRola[] = [];
   let serial = options.idOffset ?? 1;
-  const start = addDays(options.today, -150);
+  const start = addDays(options.today, -340);
   const dates: string[] = [];
 
   for (let iso = start; iso <= options.today; iso = addDays(iso, 1)) {
@@ -93,9 +93,10 @@ export function buildPersonalSample(options: {
     if (!dates.includes(iso)) dates.push(iso);
   }
   dates.sort();
-  const kept = dates.slice(-28);
+  const kept = dates;
 
   kept.forEach((date, sessionIndex) => {
+    const progress = sessionIndex / Math.max(1, kept.length - 1);
     const modality: Modality = rng() < 0.82 ? "nogi" : "gi";
     const sessionId = uuid(serial);
     serial += 1;
@@ -115,14 +116,17 @@ export function buildPersonalSample(options: {
       const partnerName = linked ? options.linkedPartner!.name : pick(rng, FREE_PARTNERS);
       const partnerUserId = linked ? options.linkedPartner!.id : null;
       const roll = rng();
+      const winCut = 0.3 + progress * 0.28;
       const result: Result =
-        roll < 0.46 ? "vitoria" : roll < 0.8 ? "derrota" : roll < 0.94 ? "empate" : "sem_resultado";
-      const finished = result === "vitoria" && rng() < 0.58;
-      const suffered = result === "derrota" && rng() < 0.42;
+        roll < winCut ? "vitoria" : roll < winCut + 0.34 ? "derrota" : roll < 0.94 ? "empate" : "sem_resultado";
+      const finished = result === "vitoria" && rng() < 0.32 + progress * 0.4;
+      const suffered = result === "derrota" && rng() < 0.62 - progress * 0.28;
+      const passes = pool(modality, "passagem");
       const scoringPool = [
         ...pool(modality, "queda"),
         ...pool(modality, "raspagem"),
-        ...pool(modality, "passagem"),
+        ...passes,
+        ...(progress > 0.45 ? passes : []),
         ...pool(modality, "controle").filter((item) => item.scoringCode),
       ];
       const techniqueCount =

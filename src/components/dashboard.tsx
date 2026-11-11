@@ -1,22 +1,10 @@
 "use client";
 
 import { useApp } from "@/components/providers";
-import { rulesFor } from "@/data/rules";
-import { formatNumber, todayIso } from "@/lib/dates";
-import { categoryLabel, modalityLabel, resultLabel } from "@/lib/labels";
-import {
-  categoryBreakdown,
-  chartTitle,
-  filterRolas,
-  periodWindow,
-  summarize,
-  techniqueRanking,
-  trends,
-  volumeBuckets,
-  type Trend,
-} from "@/lib/stats";
+import { todayIso } from "@/lib/dates";
+import { acceptRephrases, buildInsights, type Insight } from "@/lib/insights";
+import { reportFor, weeklyTrainingAverage, type ComparedMetric, type Delta, type EvolutionPoint } from "@/lib/metrics";
 import type { ModalityFilter, PeriodKey, PerspectiveRola } from "@/lib/types";
-import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const PERIODS: { id: PeriodKey; label: string }[] = [
@@ -24,26 +12,92 @@ const PERIODS: { id: PeriodKey; label: string }[] = [
   { id: "mes", label: "Mês" },
   { id: "semestre", label: "Semestre" },
   { id: "ano", label: "Ano" },
-  { id: "tudo", label: "Tudo" },
 ];
 
-function countLabel(count: number, one: string, many: string): string {
-  return `${count} ${count === 1 ? one : many}`;
+const GAMES: { key: ComparedMetric["key"]; label: string; icon: string }[] = [
+  { key: "quedas", label: "Quedas", icon: "↘" },
+  { key: "passagens", label: "Passagens", icon: "→" },
+  { key: "raspagens", label: "Raspagens", icon: "↻" },
+  { key: "finalizacoes", label: "Finalizações", icon: "●" },
+  { key: "posicoes", label: "Costas", icon: "▣" },
+  { key: "escapes", label: "Saídas", icon: "↖" },
+];
+
+function formatMinutes(minutes: number): string {
+  const rounded = Math.round(minutes);
+  if (rounded < 60) return `${rounded} min`;
+  const hours = Math.floor(rounded / 60);
+  const rest = rounded % 60;
+  return rest === 0 ? `${hours}h` : `${hours}h${String(rest).padStart(2, "0")}`;
 }
 
-function percent(value: number | null): string {
-  if (value === null) return "—";
-  return `${Math.round(value * 100)}%`;
+function DeltaMark({ delta }: { delta: Delta }) {
+  if (delta.status === "new") return <span className="delta new">novo</span>;
+  if (delta.pct === null || delta.status === "low" || delta.status === "flat") return <span className="delta flat">—</span>;
+  const good = delta.good === true;
+  const arrow = (delta.pct ?? 0) > 0 ? "↑" : "↓";
+  return <span className={`delta ${good ? "up" : "down"}`}>{arrow} {Math.abs(delta.pct ?? 0)}%</span>;
 }
 
-function TrendPill({ trend }: { trend: Trend }) {
-  if (trend.change === null) return <span className="trend na">sem base</span>;
-  const rounded = Math.round(trend.change);
-  const improved = trend.higherIsBetter ? rounded > 0 : rounded < 0;
-  const worsened = trend.higherIsBetter ? rounded < 0 : rounded > 0;
-  const tone = improved ? "up" : worsened ? "down" : "flat";
-  const sign = rounded > 0 ? "+" : "";
-  return <span className={`trend ${tone}`}>{sign}{rounded}%</span>;
+const CHARTS = [
+  { id: "volume", label: "Volume" },
+  { id: "tempo", label: "Tempo" },
+  { id: "finais", label: "Finais" },
+  { id: "pontos", label: "Pontos" },
+  { id: "resultado", label: "Placar" },
+  { id: "jogo", label: "Jogo" },
+] as const;
+
+type ChartId = (typeof CHARTS)[number]["id"];
+
+function chartSeries(id: ChartId, points: EvolutionPoint[]): { name: string; tone: "a" | "b" | "c"; values: number[] }[] {
+  if (id === "volume") {
+    return [
+      { name: "Treinos", tone: "a", values: points.map((point) => point.trainings) },
+      { name: "Rolas", tone: "b", values: points.map((point) => point.rolas) },
+    ];
+  }
+  if (id === "tempo") return [{ name: "Minutos", tone: "a", values: points.map((point) => point.matMinutes) }];
+  if (id === "finais") {
+    return [
+      { name: "Feitas", tone: "a", values: points.map((point) => point.submissionsApplied) },
+      { name: "Sofridas", tone: "b", values: points.map((point) => point.submissionsSuffered) },
+    ];
+  }
+  if (id === "pontos") {
+    return [
+      { name: "Feitos", tone: "a", values: points.map((point) => point.pointsFor) },
+      { name: "Levados", tone: "b", values: points.map((point) => point.pointsAgainst) },
+    ];
+  }
+  if (id === "resultado") {
+    return [
+      { name: "Vitórias", tone: "a", values: points.map((point) => point.wins) },
+      { name: "Derrotas", tone: "b", values: points.map((point) => point.losses) },
+      { name: "Empates", tone: "c", values: points.map((point) => point.draws) },
+    ];
+  }
+  return [
+    { name: "Quedas", tone: "a", values: points.map((point) => point.quedas) },
+    { name: "Passagens", tone: "b", values: points.map((point) => point.passagens) },
+    { name: "Raspagens", tone: "c", values: points.map((point) => point.raspagens) },
+  ];
+}
+
+function Spark({ values }: { values: number[] }) {
+  const width = 132;
+  const height = 36;
+  const max = Math.max(1, ...values);
+  const points = values.map((value, index) => {
+    const x = values.length <= 1 ? width / 2 : (index / (values.length - 1)) * width;
+    const y = height - 3 - (value / max) * (height - 8);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  });
+  return (
+    <svg className="spark" viewBox={`0 0 ${width} ${height}`} aria-hidden="true">
+      <polyline points={points.join(" ")} />
+    </svg>
+  );
 }
 
 export function Dashboard() {
@@ -53,6 +107,8 @@ export function Dashboard() {
   const [period, setPeriod] = useState<PeriodKey>("mes");
   const [modality, setModality] = useState<ModalityFilter>("todas");
   const [today, setToday] = useState<string | null>(null);
+  const [rephrased, setRephrased] = useState<{ signature: string; lines: string[] } | null>(null);
+  const [chart, setChart] = useState<ChartId>("volume");
 
   useEffect(() => {
     let alive = true;
@@ -70,35 +126,47 @@ export function Dashboard() {
     };
   }, [app]);
 
-  if (error) return <div className="pad mt"><div className="banner banner-bad"><p>{error}</p></div></div>;
-  if (!rolas || !today || !app.profile) {
-    return <div className="pad mt stack"><div className="skeleton" /><div className="skeleton" /></div>;
-  }
+  const ready = rolas && today && app.profile;
+  const view = ready ? reportFor(rolas, period, today, modality) : null;
+  const templates = view && today && rolas
+    ? buildInsights(view.metrics, period, view.current, weeklyTrainingAverage(rolas.filter((rola) => modality === "todas" || rola.modality === modality), today)).slice(0, 3)
+    : [];
+  const signature = templates.map((item) => item.text).join("\n");
+  const payload = JSON.stringify(templates);
 
-  const window = periodWindow(period, today);
-  const currentRolas = filterRolas(rolas, window, modality);
-  const previousRolas = window.previousStart && window.previousEnd
-    ? filterRolas(rolas, { start: window.previousStart, end: window.previousEnd }, modality)
-    : null;
-  const summary = summarize(currentRolas);
-  const comparison = trends(summary, previousRolas ? summarize(previousRolas) : null);
-  const buckets = volumeBuckets(period, currentRolas, today);
-  const categories = categoryBreakdown(currentRolas);
-  const ranking = techniqueRanking(currentRolas);
-  const maxCategory = Math.max(1, ...categories.map((item) => item.count));
-  const rules = rulesFor("ibjjf");
-  const monthOpen = period === "mes" && today < window.end;
+  useEffect(() => {
+    const current = JSON.parse(payload) as Insight[];
+    if (current.length === 0) return;
+    let alive = true;
+    void fetch("/api/insights", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ insights: current }),
+    })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return (await response.json()) as { lines?: string[] };
+      })
+      .then((body) => {
+        if (!alive || !body?.lines) return;
+        setRephrased({ signature, lines: body.lines });
+      })
+      .catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [payload, signature]);
+
+  if (error) return <div className="pad mt"><div className="banner banner-bad"><p>{error}</p></div></div>;
+  if (!view || !app.profile) return <div className="pad mt stack"><div className="skeleton" /><div className="skeleton" /></div>;
+
+  const metric = (key: ComparedMetric["key"]) => view.metrics.find((item) => item.key === key)!;
+  const shown = rephrased?.signature === signature ? acceptRephrases(templates, rephrased.lines) : templates;
 
   return (
     <div>
-      <header className="mast">
-        <p className="eyebrow">{app.mode === "demo" ? "Demonstração" : "Tatame"}</p>
-        <h1>E aí, {app.profile.displayName.split(" ")[0]}</h1>
-        <p className="lede">
-          {summary.rolas === 0
-            ? "Nenhum rola neste recorte."
-            : `${summary.rolas} rolas ${period === "semana" ? "nesta semana" : period === "mes" ? "neste mês" : period === "semestre" ? "neste semestre" : period === "ano" ? "neste ano" : "no histórico"}.`}
-        </p>
+      <header className="mast glance-head">
+        <h1>{app.profile.displayName.split(" ")[0]}</h1>
       </header>
       <div className="pad stack">
         <div className="filters" role="group" aria-label="Período">
@@ -109,145 +177,136 @@ export function Dashboard() {
         <div className="filters" role="group" aria-label="Modalidade">
           {(["todas", "nogi", "gi"] as const).map((item) => (
             <button key={item} type="button" className={`chip${modality === item ? " chip-on" : ""}`} onClick={() => setModality(item)}>
-              {item === "todas" ? "Todas" : modalityLabel(item)}
+              {item === "todas" ? "Tudo" : item === "nogi" ? "No-gi" : "Kimono"}
             </button>
           ))}
         </div>
 
-        {rolas.length === 0 ? (
-          <div className="card empty">
-            <h2>O tatame ainda está em branco</h2>
-            <p className="lede">Registre um treino ou carregue um histórico de exemplo para ver o painel.</p>
-            <div className="stack mt">
-              <Link className="btn btn-primary" href="/treinos/novo" style={{ display: "grid", placeItems: "center", textDecoration: "none" }}>Anotar treino</Link>
-              <SampleButton />
-            </div>
+        <section className="insight-row" aria-label="Destaques">
+          {shown.map((insight) => (
+            <article key={insight.id} className={`insight ${insight.tone}`}>
+              <span className="insight-arrow" aria-hidden="true">{insight.tone === "down" ? "↓" : "↑"}</span>
+              <p>{insight.text}</p>
+            </article>
+          ))}
+          {shown.length === 0 ? <article className="insight neutral"><p>Ainda pouco volume para comparar.</p></article> : null}
+        </section>
+
+        <section className="hero-grid">
+          <Hero metric={metric("trainings")} display={String(view.current.trainings)} series={view.evolution.map((item) => item.trainings)} />
+          <Hero metric={metric("rolas")} display={String(view.current.rolas)} series={view.evolution.map((item) => item.rolas)} />
+          <Hero metric={metric("matMinutes")} display={formatMinutes(view.current.matMinutes)} series={view.evolution.map((item) => item.matMinutes)} hint={`média ${formatMinutes(view.current.avgRolaMinutes)}`} />
+          <Hero metric={metric("winRate")} display={`${Math.round(view.current.winRate * 100)}%`} series={view.evolution.map((item) => item.wins)} hint={`${view.current.wins}V ${view.current.losses}D ${view.current.draws}E`} />
+        </section>
+
+        <section className="card">
+          <div className="spread">
+            <h2>Finalizações</h2>
+            <DeltaMark delta={metric("submissionsApplied").delta} />
           </div>
-        ) : (
-          <>
-            <div className="grid-2">
-              <article className="card"><div className="stat-value">{summary.rolas}</div><div className="stat-label">Rolas</div></article>
-              <article className="card"><div className="stat-value">{percent(summary.winRate)}</div><div className="stat-label">Taxa de vitória</div><div className="sub">{countLabel(summary.wins, "vitória", "vitórias")} · {countLabel(summary.losses, "derrota", "derrotas")} · {countLabel(summary.draws, "empate", "empates")}</div></article>
-              <article className="card"><div className="stat-value">{summary.submissionsPerRola === null ? "—" : formatNumber(summary.submissionsPerRola, 2)}</div><div className="stat-label">Finalizações por rola</div></article>
-              <article className="card"><div className="stat-value">{percent(summary.finishRate)}</div><div className="stat-label">Rolas finalizadas</div><div className="sub">{summary.submissionsSuffered} finalizações sofridas</div></article>
-            </div>
+          <div className="split-meter" aria-hidden="true">
+            <span style={{ flex: Math.max(view.current.submissionsApplied, 0.2) }} />
+            <span style={{ flex: Math.max(view.current.submissionsSuffered, 0.2) }} />
+          </div>
+          <div className="spread">
+            <strong>{view.current.submissionsApplied} feitas</strong>
+            <strong>{view.current.submissionsSuffered} sofridas</strong>
+          </div>
+        </section>
 
-            {period !== "tudo" ? (
-              <section className="card">
-                <div className="spread"><h2>Comparado</h2><span className="sub">{window.comparisonLabel}</span></div>
-                <div className="stack mt">
-                  {comparison.map((trend) => (
-                    <div className="spread" key={trend.label}>
-                      <span>{trend.label}</span>
-                      <TrendPill trend={trend} />
-                    </div>
-                  ))}
-                </div>
-                {monthOpen ? <p className="sub mt">O mês ainda não fechou, então o volume pode ficar abaixo do mês anterior.</p> : null}
-              </section>
-            ) : null}
+        <section className="card">
+          <div className="spread">
+            <h2>Pontos</h2>
+            <DeltaMark delta={metric("pointsFor").delta} />
+          </div>
+          <div className="split-meter" aria-hidden="true">
+            <span style={{ flex: Math.max(view.current.pointsFor, 0.2) }} />
+            <span style={{ flex: Math.max(view.current.pointsAgainst, 0.2) }} />
+          </div>
+          <div className="spread">
+            <strong>{view.current.pointsFor} feitos</strong>
+            <strong>{view.current.pointsAgainst} levados</strong>
+          </div>
+        </section>
 
-            <section className="card">
-              <h2>{chartTitle(period)}</h2>
-              <div className="bars" role="img" aria-label={chartTitle(period)}>
-                {buckets.map((bucket) => (
-                  <div className="bar-col" key={bucket.label}>
-                    <span className="bar-value">{bucket.value}</span>
-                    <div className="bar-track">
-                      <div className="bar-fill" style={{ height: `${Math.max(4, (bucket.value / Math.max(1, ...buckets.map((item) => item.value))) * 100)}%` }} />
-                    </div>
-                    <span className="bar-label">{bucket.label}</span>
-                  </div>
-                ))}
-              </div>
-            </section>
+        <section className="game-grid" aria-label="Jogo">
+          {GAMES.map((game) => {
+            const item = metric(game.key);
+            return (
+              <article key={game.key} className="game-tile">
+                <span className="game-icon" aria-hidden="true">{game.icon}</span>
+                <strong>{Math.round(view.current[game.key])}</strong>
+                <span>{game.label}</span>
+                <DeltaMark delta={item.delta} />
+              </article>
+            );
+          })}
+        </section>
 
-            <section className="card">
-              <h2>Por categoria</h2>
-              <div className="cat mt">
-                {categories.map((item) => (
-                  <div className="cat-row" key={item.category}>
-                    <span>{categoryLabel(item.category)}</span>
-                    <div className="cat-track"><div className="cat-fill" style={{ width: `${(item.count / maxCategory) * 100}%` }} /></div>
-                    <strong>{item.count}</strong>
-                  </div>
-                ))}
-              </div>
-            </section>
+        <section className="result-row" aria-label="Vitórias, derrotas e empates">
+          <Result label="Vitórias" value={view.current.wins} delta={metric("wins").delta} />
+          <Result label="Derrotas" value={view.current.losses} delta={metric("losses").delta} />
+          <Result label="Empates" value={view.current.draws} delta={metric("draws").delta} />
+        </section>
 
-            <section className="card">
-              <h2>Técnicas</h2>
-              {ranking.length === 0 ? <p className="sub mt">Nenhuma técnica anotada neste recorte.</p> : (
-                <div className="grid-2 mt">
-                  <div>
-                    <p className="label">Mais usadas</p>
-                    <div className="tech-list mt">
-                      {ranking.slice(0, 5).map((item) => (
-                        <div className="tech-line" key={item.id}><span>{item.name}</span><strong>{item.count}</strong></div>
-                      ))}
-                    </div>
-                  </div>
-                  <div>
-                    <p className="label">Menos usadas</p>
-                    {ranking.length < 6 ? <p className="sub">Registre mais técnicas para comparar o que quase não aparece.</p> : (
-                      <div className="tech-list mt">
-                        {[...ranking].reverse().slice(0, 5).map((item) => (
-                          <div className="tech-line" key={item.id}><span>{item.name}</span><strong>{item.count}</strong></div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
-            </section>
-
-            <section className="card">
-              <h2>Pontuação IBJJF</h2>
-              <p className="sub mt">{rules.map((rule) => `${rule.label} ${rule.points}`).join(" · ")}. Os pontos sugeridos saem das técnicas, e você pode editar.</p>
-            </section>
-
-            <section>
-              <div className="spread mb"><h2>Últimos rolas</h2><Link href="/treinos">Ver treinos</Link></div>
-              <div className="list">
-                {rolas.slice(0, 4).map((rola) => (
-                  <Link key={rola.id} href={rola.ownedByMe ? `/treinos/${rola.sessionId}` : `/rolas/${rola.id}`} className="card">
-                    <div className="spread">
-                      <strong>{rola.opponentName}</strong>
-                      <span className="score">{rola.pointsFor}×{rola.pointsAgainst}</span>
-                    </div>
-                    <div className="sub">{modalityLabel(rola.modality)} · {resultLabel(rola.result)} · {rola.durationMinutes} min</div>
-                  </Link>
-                ))}
-              </div>
-            </section>
-          </>
-        )}
+        <section className="card">
+          <div className="filters chart-switch" role="group" aria-label="Gráfico">
+            {CHARTS.map((item) => (
+              <button key={item.id} type="button" className={`chip${chart === item.id ? " chip-on" : ""}`} onClick={() => setChart(item.id)}>{item.label}</button>
+            ))}
+          </div>
+          <Bars points={view.evolution} series={chartSeries(chart, view.evolution)} />
+        </section>
       </div>
     </div>
   );
 }
 
-function SampleButton() {
-  const app = useApp();
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+function Result({ label, value, delta }: { label: string; value: number; delta: Delta }) {
   return (
-    <>
-      {error ? <div className="banner banner-bad"><p>{error}</p></div> : null}
-      <button
-        className="btn btn-ghost"
-        type="button"
-        disabled={pending}
-        onClick={() => {
-          setPending(true);
-          void app.loadSample().catch((caught: unknown) => {
-            setError(caught instanceof Error ? caught.message : "Não foi possível carregar o exemplo.");
-            setPending(false);
-          });
-        }}
-      >
-        {pending ? "Carregando..." : "Carregar treinos de exemplo"}
-      </button>
-    </>
+    <article className="hero-stat">
+      <span className="stat-label">{label}</span>
+      <div className="stat-value">{value}</div>
+      <DeltaMark delta={delta} />
+    </article>
+  );
+}
+
+function Bars({ points, series }: { points: EvolutionPoint[]; series: { name: string; tone: "a" | "b" | "c"; values: number[] }[] }) {
+  const max = Math.max(1, ...series.flatMap((item) => item.values));
+  return (
+    <div>
+      <div className="legend">
+        {series.map((item) => <span key={item.name} className={`legend-${item.tone}`}>{item.name}</span>)}
+      </div>
+      <div className="bars" role="img" aria-label={series.map((item) => item.name).join(", ")}>
+        {points.map((point, index) => (
+          <div className="bar-col" key={`${point.label}-${index}`}>
+            <div className="bar-stack">
+              {series.map((item) => {
+                const value = item.values[index] ?? 0;
+                if (value <= 0) return <span key={item.name} className="bar bar-empty" />;
+                return <span key={item.name} className={`bar bar-${item.tone}`} style={{ height: `${Math.max(8, (value / max) * 100)}%` }} />;
+              })}
+            </div>
+            <em>{point.label}</em>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Hero({ metric, display, series, hint }: { metric: ComparedMetric; display: string; series: number[]; hint?: string }) {
+  return (
+    <article className="hero-stat">
+      <div className="spread">
+        <span className="stat-label">{metric.label}</span>
+        <DeltaMark delta={metric.delta} />
+      </div>
+      <div className="stat-value">{display}</div>
+      {hint ? <span className="sub">{hint}</span> : null}
+      <Spark values={series} />
+    </article>
   );
 }

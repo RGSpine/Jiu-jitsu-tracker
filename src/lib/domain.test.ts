@@ -71,6 +71,9 @@ describe("estatísticas", () => {
     const week = periodWindow("semana", "2026-11-11");
     expect(week.start).toBe("2026-11-09");
     expect(week.end).toBe("2026-11-15");
+    expect(week.previousEnd).toBe("2026-11-04");
+    expect(periodWindow("mes", "2026-11-11").previousEnd).toBe("2026-10-11");
+    expect(periodWindow("ano", "2026-11-11").previousEnd).toBe("2025-11-11");
     expect(periodWindow("semestre", "2026-11-11").start).toBe("2026-07-01");
   });
 });

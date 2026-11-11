@@ -75,18 +75,29 @@ function startOfWeek(iso: string): string {
   return addDays(iso, diff);
 }
 
+function daysBetween(start: string, end: string): number {
+  return Math.round((parseIso(end).getTime() - parseIso(start).getTime()) / 86_400_000);
+}
+
+/** Mesmo tanto de dias já decorridos, sem comparar um período aberto com um fechado. */
+function equivalentEnd(currentStart: string, today: string, previousStart: string, previousLimit: string): string {
+  const matched = addDays(previousStart, daysBetween(currentStart, today));
+  return matched < previousLimit ? matched : previousLimit;
+}
+
 export function periodWindow(key: PeriodKey, today: string): PeriodWindow {
   if (key === "semana") {
     const start = startOfWeek(today);
     const end = addDays(start, 6);
+    const previousStart = addDays(start, -7);
     return {
       key,
       label: "Esta semana",
       comparisonLabel: "semana anterior",
       start,
       end,
-      previousStart: addDays(start, -7),
-      previousEnd: addDays(start, -1),
+      previousStart,
+      previousEnd: equivalentEnd(start, today, previousStart, addDays(start, -1)),
     };
   }
 
@@ -101,7 +112,7 @@ export function periodWindow(key: PeriodKey, today: string): PeriodWindow {
       start: current.start,
       end: current.end,
       previousStart: previous.start,
-      previousEnd: previous.end,
+      previousEnd: equivalentEnd(current.start, today, previous.start, previous.end),
     };
   }
 
@@ -117,20 +128,22 @@ export function periodWindow(key: PeriodKey, today: string): PeriodWindow {
       start: current.start,
       end: current.end,
       previousStart: previous.start,
-      previousEnd: previous.end,
+      previousEnd: equivalentEnd(current.start, today, previous.start, previous.end),
     };
   }
 
   if (key === "ano") {
     const year = parseIso(today).getFullYear();
+    const start = `${year}-01-01`;
+    const previousStart = `${year - 1}-01-01`;
     return {
       key,
       label: String(year),
       comparisonLabel: "ano anterior",
-      start: `${year}-01-01`,
+      start,
       end: `${year}-12-31`,
-      previousStart: `${year - 1}-01-01`,
-      previousEnd: `${year - 1}-12-31`,
+      previousStart,
+      previousEnd: equivalentEnd(start, today, previousStart, `${year - 1}-12-31`),
     };
   }
 

@@ -32,6 +32,10 @@ export function SessionForm({ sessionId }: { sessionId?: string }) {
   const [picker, setPicker] = useState<{ rolaId: string; field: Field } | null>(null);
   const [pendingDraft, setPendingDraft] = useState<{ draft: SessionDraft; warnings: string[] } | null>(null);
   const [warnings, setWarnings] = useState<string[]>([]);
+  const [recentNames, setRecentNames] = useState<string[]>([]);
+  const [recentTech, setRecentTech] = useState<string[]>([]);
+  const [details, setDetails] = useState(false);
+  const [capture, setCapture] = useState<"off" | "texto" | "audio">("off");
 
   useEffect(() => {
     let alive = true;
@@ -40,6 +44,16 @@ export function SessionForm({ sessionId }: { sessionId?: string }) {
       if (!alive) return;
       setCatalog(reference.techniques);
       setRules(reference.rules);
+      const history = await app.rolas().catch(() => []);
+      const names: string[] = [];
+      const techCount = new Map<string, number>();
+      for (const item of history) {
+        if (item.opponentName && !names.includes(item.opponentName) && names.length < 6) names.push(item.opponentName);
+        for (const tech of item.techniquesUsed) techCount.set(tech.id, (techCount.get(tech.id) ?? 0) + 1);
+      }
+      if (!alive) return;
+      setRecentNames(names);
+      setRecentTech([...techCount.entries()].sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id]) => id));
       if (!sessionId) {
         const modality = app.profile?.preferredModality ?? "nogi";
         setDraft(emptyDraft(todayIso(), modality));
@@ -110,8 +124,7 @@ export function SessionForm({ sessionId }: { sessionId?: string }) {
     <div>
       <header className="mast">
         <p className="eyebrow">{sessionId ? "Editar treino" : "Novo treino"}</p>
-        <h1>{sessionId ? "Ajustar rolas" : "Anotar treino"}</h1>
-        <p className="lede">Regras {federationName}. A sugestão de pontos pode ser editada.</p>
+        <h1>{sessionId ? "Ajustar" : "Anotar"}</h1>
       </header>
       <div className="pad stack">
         {error ? <div className="banner banner-bad"><p>{error}</p></div> : null}
@@ -131,7 +144,11 @@ export function SessionForm({ sessionId }: { sessionId?: string }) {
           </div>
         ) : null}
 
-        <Capture onParsed={offerParsed} />
+        <div className="voice-row">
+          <button className={`record${capture === "audio" ? " record-on" : ""}`} type="button" onClick={() => setCapture(capture === "audio" ? "off" : "audio")}>Falar</button>
+          <button className="btn btn-ghost" type="button" onClick={() => setCapture(capture === "texto" ? "off" : "texto")}>Escrever</button>
+        </div>
+        {capture !== "off" ? <Capture mode={capture} onParsed={offerParsed} /> : null}
 
         <label className="field">
           <span>Data</span>
@@ -144,7 +161,13 @@ export function SessionForm({ sessionId }: { sessionId?: string }) {
             </button>
           ))}
         </div>
-        <p className="sub">{activeRules.map((rule) => `${rule.label} ${rule.points}`).join(" · ")}</p>
+        {recentNames.length > 0 ? (
+          <div className="quick-chips" aria-label="Parceiros recentes">
+            {recentNames.map((name) => (
+              <button key={name} type="button" className="chip" onClick={() => updateRola(draft.rolas.at(-1)?.localId ?? "", { partnerName: name, partnerUserId: null })}>{name.split(" ")[0]}</button>
+            ))}
+          </div>
+        ) : null}
 
         {draft.rolas.map((rola, index) => {
           const suggested = suggestPoints(rola.techniquesUsed, catalog, activeRules);
@@ -163,10 +186,15 @@ export function SessionForm({ sessionId }: { sessionId?: string }) {
                   </button>
                 ))}
               </div>
-              <label className="field">
-                <span>Outra duração (min)</span>
-                <input inputMode="numeric" value={rola.durationMinutes} onChange={(event) => updateRola(rola.localId, { durationMinutes: Number(event.target.value) || 0 })} />
-              </label>
+              {recentTech.length > 0 ? (
+                <div className="quick-chips" aria-label="Técnicas recentes">
+                  {recentTech.map((id) => (
+                    <button key={id} type="button" className={`chip${rola.techniquesUsed.includes(id) ? " chip-on" : ""}`} onClick={() => updateRola(rola.localId, { techniquesUsed: rola.techniquesUsed.includes(id) ? rola.techniquesUsed.filter((item) => item !== id) : [...rola.techniquesUsed, id] })}>
+                      {catalog.find((item) => item.id === id)?.name ?? id}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               <PartnerField
                 name={rola.partnerName}
                 linked={Boolean(rola.partnerUserId)}
@@ -187,10 +215,18 @@ export function SessionForm({ sessionId }: { sessionId?: string }) {
                 <span className="sub">Sugestão {federationName}: {suggested}</span>
                 <button className="linkish" type="button" onClick={() => updateRola(rola.localId, { pointsFor: suggested })}>Aplicar</button>
               </div>
-              <Stepper label="Minhas vantagens" value={rola.advantagesFor} onChange={(advantagesFor) => updateRola(rola.localId, { advantagesFor })} />
-              <Stepper label="Vantagens do parceiro" value={rola.advantagesAgainst} onChange={(advantagesAgainst) => updateRola(rola.localId, { advantagesAgainst })} />
-              <Stepper label="Minhas punições" value={rola.penaltiesFor} onChange={(penaltiesFor) => updateRola(rola.localId, { penaltiesFor })} />
-              <Stepper label="Punições do parceiro" value={rola.penaltiesAgainst} onChange={(penaltiesAgainst) => updateRola(rola.localId, { penaltiesAgainst })} />
+              {details ? (
+                <>
+                  <label className="field">
+                    <span>Minutos</span>
+                    <input inputMode="numeric" value={rola.durationMinutes} onChange={(event) => updateRola(rola.localId, { durationMinutes: Number(event.target.value) || 0 })} />
+                  </label>
+                  <Stepper label="Minhas vantagens" value={rola.advantagesFor} onChange={(advantagesFor) => updateRola(rola.localId, { advantagesFor })} />
+                  <Stepper label="Vantagens do parceiro" value={rola.advantagesAgainst} onChange={(advantagesAgainst) => updateRola(rola.localId, { advantagesAgainst })} />
+                  <Stepper label="Minhas punições" value={rola.penaltiesFor} onChange={(penaltiesFor) => updateRola(rola.localId, { penaltiesFor })} />
+                  <Stepper label="Punições do parceiro" value={rola.penaltiesAgainst} onChange={(penaltiesAgainst) => updateRola(rola.localId, { penaltiesAgainst })} />
+                </>
+              ) : null}
               {(["submissionsApplied", "submissionsSuffered", "techniquesUsed"] as const).map((field) => (
                 <div key={field}>
                   <div className="spread">
@@ -210,11 +246,15 @@ export function SessionForm({ sessionId }: { sessionId?: string }) {
           );
         })}
 
-        <button className="btn btn-ghost" type="button" onClick={() => setDraft({ ...draft, rolas: [...draft.rolas, emptyRola()] })}>Adicionar rola</button>
-        <label className="field">
-          <span>Notas do treino</span>
-          <textarea value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} placeholder="Opcional" />
-        </label>
+        <button className="btn btn-ghost" type="button" onClick={() => setDraft({ ...draft, rolas: [...draft.rolas, emptyRola()] })}>+ Rola</button>
+        <button className="linkish" type="button" onClick={() => setDetails((value) => !value)}>{details ? "Menos" : "Vantagem, punição e nota"}</button>
+        {details ? (
+          <label className="field">
+            <span>Nota</span>
+            <textarea value={draft.notes} onChange={(event) => setDraft({ ...draft, notes: event.target.value })} />
+          </label>
+        ) : null}
+        <p className="sub">Sugestão {federationName}: {activeRules.map((rule) => `${rule.label} ${rule.points}`).join(" · ")}</p>
         <button className="btn btn-primary" type="button" disabled={pending} onClick={() => void save()}>{pending ? "Salvando..." : "Salvar treino"}</button>
         {sessionId ? <DeleteSession sessionId={sessionId} /> : null}
       </div>
@@ -290,9 +330,8 @@ function PartnerField({
     <div className="stack">
       <label className="field">
         <span>Parceiro</span>
-        <input value={name} onChange={(event) => { setHits([]); onName(event.target.value); }} placeholder="Nome ou e-mail" />
+        <input value={name} onChange={(event) => { setHits([]); onName(event.target.value); }} placeholder="Nome" />
       </label>
-      <p className="sub">Se a pessoa não aparecer, o nome fica só neste treino.</p>
       {hits.length ? (
         <div className="hits">
           {hits.map((hit) => (
@@ -363,18 +402,10 @@ function TechniqueSheet({
   );
 }
 
-function Capture({ onParsed }: { onParsed: (parsed: ParsedSession) => void }) {
-  const [mode, setMode] = useState<"manual" | "texto" | "audio">("manual");
+function Capture({ mode, onParsed }: { mode: "texto" | "audio"; onParsed: (parsed: ParsedSession) => void }) {
   return (
     <section className="card stack">
-      <div className="choice-row" role="group" aria-label="Como anotar">
-        {([["manual", "Manual"], ["texto", "Texto"], ["audio", "Áudio"]] as const).map(([id, label]) => (
-          <button key={id} type="button" className={`mode${mode === id ? " mode-on" : ""}`} onClick={() => setMode(id)}>{label}</button>
-        ))}
-      </div>
-      {mode === "manual" ? <p className="sub">Preencha os rolas abaixo. Texto e áudio também caem neste formulário para revisão.</p> : null}
-      {mode === "texto" ? <TextCapture onParsed={onParsed} /> : null}
-      {mode === "audio" ? <AudioCapture onParsed={onParsed} /> : null}
+      {mode === "texto" ? <TextCapture onParsed={onParsed} /> : <AudioCapture onParsed={onParsed} />}
     </section>
   );
 }

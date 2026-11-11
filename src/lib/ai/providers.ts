@@ -62,7 +62,7 @@ Regras:
 - Não invente finalização. Use só ids do glossário.`;
 }
 
-export async function extractWithDeepSeek(text: string): Promise<unknown> {
+export async function completeJson(system: string, user: string): Promise<unknown> {
   const base = (process.env.DEEPSEEK_BASE_URL || DEFAULT_DEEPSEEK_BASE_URL).replace(/\/$/, "");
   const response = await fetch(`${base}/chat/completions`, {
     method: "POST",
@@ -76,8 +76,8 @@ export async function extractWithDeepSeek(text: string): Promise<unknown> {
       thinking: { type: "disabled" },
       response_format: { type: "json_object" },
       messages: [
-        { role: "system", content: extractionSystemPrompt() },
-        { role: "user", content: text },
+        { role: "system", content: system },
+        { role: "user", content: user },
       ],
     }),
   });
@@ -88,6 +88,10 @@ export async function extractWithDeepSeek(text: string): Promise<unknown> {
   const payload = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
   const content = payload.choices?.[0]?.message?.content ?? "{}";
   return JSON.parse(content) as unknown;
+}
+
+export async function extractWithDeepSeek(text: string): Promise<unknown> {
+  return completeJson(extractionSystemPrompt(), text);
 }
 
 export async function transcribeAudio(audio: File): Promise<string> {
