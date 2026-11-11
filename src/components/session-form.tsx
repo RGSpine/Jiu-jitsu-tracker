@@ -1,7 +1,7 @@
 "use client";
 
 import { useApp } from "@/components/providers";
-import { AI_UNAVAILABLE_MESSAGE } from "@/lib/config";
+import { AUDIO_AI_UNAVAILABLE_MESSAGE, TEXT_AI_UNAVAILABLE_MESSAGE } from "@/lib/config";
 import { suggestPoints } from "@/lib/scoring";
 import { draftFromParsed, type ParsedSession } from "@/lib/parse-draft";
 import { emptyDraft, emptyRola, createId } from "@/lib/drafts";
@@ -406,7 +406,7 @@ function TextCapture({ onParsed }: { onParsed: (parsed: ParsedSession) => void }
 
   return (
     <div className="stack">
-      {configured === false ? <div className="banner"><p>{AI_UNAVAILABLE_MESSAGE}</p></div> : null}
+      {configured === false ? <div className="banner"><p>{TEXT_AI_UNAVAILABLE_MESSAGE}</p></div> : null}
       <textarea
         value={text}
         onChange={(event) => setText(event.target.value)}
@@ -491,7 +491,7 @@ function AudioCapture({ onParsed }: { onParsed: (parsed: ParsedSession) => void 
 
   return (
     <div className="stack">
-      {configured === false ? <div className="banner"><p>{AI_UNAVAILABLE_MESSAGE}</p></div> : null}
+      {configured === false ? <div className="banner"><p>{AUDIO_AI_UNAVAILABLE_MESSAGE}</p></div> : null}
       <div className="spread">
         <button className={`record${recording ? " record-on" : ""}`} type="button" onClick={() => void toggle()} disabled={configured === false || pending}>
           {recording ? "Parar" : "Gravar"}

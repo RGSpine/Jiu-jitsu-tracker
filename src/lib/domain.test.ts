@@ -4,7 +4,7 @@ import { rulesFor } from "@/data/rules";
 import { demoPerspectives, createSeed } from "@/lib/demo-db";
 import { draftFromParsed } from "@/lib/parse-draft";
 import { invertResult, toPerspective } from "@/lib/perspective";
-import { matchTechnique } from "@/lib/match-technique";
+import { matchTechnique } from "@/lib/glossary-match";
 import { suggestPoints } from "@/lib/scoring";
 import { buildIncomingFromPartner, buildPersonalSample, DEMO_ANA_ID, DEMO_ROBERTO_ID } from "@/lib/sample-data";
 import { emptyDraft } from "@/lib/drafts";

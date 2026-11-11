@@ -1,6 +1,9 @@
-import { techniques } from "@/data/catalog";
-import { AI_UNAVAILABLE_MESSAGE, supabaseConfigured } from "@/lib/config";
+import { extractWithDeepSeek, extractionConfigured } from "@/lib/ai/providers";
+import { TEXT_AI_UNAVAILABLE_MESSAGE, supabaseConfigured } from "@/lib/config";
+import { canonicalizeNames } from "@/lib/normalize-report";
+import { normalizeReport } from "@/lib/normalize-report";
 import { createServerSupabase } from "@/lib/supabase/server";
+import type { ParsedSession } from "@/lib/parse-draft";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 
@@ -30,35 +33,47 @@ const parsedSchema = z.object({
     .optional(),
 });
 
-function catalogPrompt(): string {
-  return techniques
-    .map((item) => `${item.name} | ${item.category} | ${item.modality}`)
-    .join("\n");
+function withCanonicalTechniques(session: ParsedSession, source: string): ParsedSession {
+  const fallback = normalizeReport(source);
+  const rolas = (session.rolas ?? []).map((rola, index) => {
+    const submissionsApplied = canonicalizeNames(rola.submissionsApplied);
+    const submissionsSuffered = canonicalizeNames(rola.submissionsSuffered);
+    const techniquesUsed = canonicalizeNames(rola.techniquesUsed);
+    const backup = fallback.rolas?.[index];
+    const empty = submissionsApplied.length + submissionsSuffered.length + techniquesUsed.length === 0;
+    return {
+      ...rola,
+      submissionsApplied: empty ? backup?.submissionsApplied ?? [] : submissionsApplied,
+      submissionsSuffered: empty ? backup?.submissionsSuffered ?? [] : submissionsSuffered,
+      techniquesUsed: empty ? backup?.techniquesUsed ?? [] : techniquesUsed,
+    };
+  });
+  return {
+    ...session,
+    modality: session.modality ?? fallback.modality,
+    rolas: rolas.length > 0 ? rolas : fallback.rolas,
+  };
 }
 
-async function requireAccess(): Promise<NextResponse | null> {
-  if (!process.env.OPENAI_API_KEY) {
-    return NextResponse.json({ error: AI_UNAVAILABLE_MESSAGE, configured: false }, { status: 503 });
-  }
-  if (supabaseConfigured) {
-    const supabase = await createServerSupabase();
-    const { data } = await supabase.auth.getUser();
-    if (!data.user) {
-      return NextResponse.json(
-        { error: "Entre na sua conta para usar a leitura automática." },
-        { status: 401 },
-      );
-    }
+async function requireUser(): Promise<NextResponse | null> {
+  if (!supabaseConfigured) return null;
+  const supabase = await createServerSupabase();
+  const { data } = await supabase.auth.getUser();
+  if (!data.user) {
+    return NextResponse.json({ error: "Entre na sua conta para usar a leitura automática." }, { status: 401 });
   }
   return null;
 }
 
 export async function GET() {
-  return NextResponse.json({ configured: Boolean(process.env.OPENAI_API_KEY) });
+  return NextResponse.json({ configured: extractionConfigured() });
 }
 
 export async function POST(request: Request) {
-  const denied = await requireAccess();
+  if (!extractionConfigured()) {
+    return NextResponse.json({ error: TEXT_AI_UNAVAILABLE_MESSAGE, configured: false }, { status: 503 });
+  }
+  const denied = await requireUser();
   if (denied) return denied;
 
   const body = (await request.json().catch(() => null)) as { text?: string } | null;
@@ -70,72 +85,13 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "O relato passou de 6000 caracteres." }, { status: 400 });
   }
 
-  const system = `Você converte relatos de treino de jiu-jitsu, em português do Brasil, para JSON.
-Use o vocabulário do tatame. Rola é masculino: o rola, os rolas. Também use raspagem, passagem de guarda, queda, finalização, vantagem, punição, montada, pegada nas costas e joelho na barriga.
-Responda só JSON neste formato:
-{
-  "date": "AAAA-MM-DD ou null se não der para saber",
-  "modality": "gi, nogi ou null",
-  "notes": "resumo curto ou vazio",
-  "rolas": [
-    {
-      "durationMinutes": 6,
-      "partnerName": "nome",
-      "result": "vitoria | derrota | empate | sem_resultado",
-      "pointsFor": 0,
-      "pointsAgainst": 0,
-      "advantagesFor": 0,
-      "advantagesAgainst": 0,
-      "penaltiesFor": 0,
-      "penaltiesAgainst": 0,
-      "submissionsApplied": ["nome da finalização que eu apliquei"],
-      "submissionsSuffered": ["nome da finalização que eu sofri"],
-      "techniquesUsed": ["quedas, raspagens, passagens e posições que eu fiz"]
-    }
-  ]
-}
-Regras:
-- Um rola por round. "5 rolas de 6 min" vira 5 itens se os parceiros não forem nomeados; se só alguns nomes aparecerem, crie os rolas nomeados e complete os outros com partnerName vazio.
-- "4 a 2" ou "4x2": o primeiro número é pointsFor e o segundo é pointsAgainst, salvo se o texto disser o contrário.
-- Kimono = gi. No-gi, sem kimono ou nogi = nogi.
-- Não invente finalização que não esteja no texto.
-- Nomes de técnica devem sair desta lista, com o mesmo texto:
-${catalogPrompt()}`;
-
   try {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: process.env.OPENAI_PARSE_MODEL || "gpt-4o-mini",
-        temperature: 0.1,
-        response_format: { type: "json_object" },
-        messages: [
-          { role: "system", content: system },
-          { role: "user", content: text },
-        ],
-      }),
-    });
-    if (!response.ok) {
-      console.error(await response.text());
-      return NextResponse.json(
-        { error: "A leitura automática falhou. Você pode preencher o formulário na mão." },
-        { status: 502 },
-      );
-    }
-    const payload = (await response.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const content = payload.choices?.[0]?.message?.content ?? "{}";
-    const parsed = parsedSchema.safeParse(JSON.parse(content));
+    const raw = await extractWithDeepSeek(text);
+    const parsed = parsedSchema.safeParse(raw);
     if (!parsed.success) {
-      return NextResponse.json(
-        { error: "Não consegui organizar esse relato. Ajuste o texto ou preencha o formulário." },
-        { status: 422 },
-      );
+      return NextResponse.json({ session: normalizeReport(text), normalized: true });
     }
-    return NextResponse.json({ session: parsed.data });
+    return NextResponse.json({ session: withCanonicalTechniques(parsed.data, text) });
   } catch (error) {
     console.error(error);
     return NextResponse.json(

@@ -1,6 +1,11 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { techniques } from "../src/data/catalog.ts";
+import { glossary } from "../src/data/glossary.ts";
 import { federations, scoringRules } from "../src/data/rules.ts";
+
+const glossaryAliases = new Map(
+  glossary.map((entry) => [entry.id, [...entry.aliases, ...entry.misspellings]]),
+);
 
 function sqlString(value) {
   return `'${String(value).replaceAll("'", "''")}'`;
@@ -12,12 +17,12 @@ function sqlArray(values) {
 }
 
 const techniqueRows = techniques
-  .map(
-    (item) =>
-      `  (${sqlString(item.id)}, ${sqlString(item.name)}, ${sqlString(item.category)}, ${sqlString(item.modality)}, ${
-        item.scoringCode ? sqlString(item.scoringCode) : "null"
-      }, ${sqlArray(item.aliases)})`,
-  )
+  .map((item) => {
+    const aliases = [...new Set([...(item.aliases ?? []), ...(glossaryAliases.get(item.id) ?? [])])];
+    return `  (${sqlString(item.id)}, ${sqlString(item.name)}, ${sqlString(item.category)}, ${sqlString(item.modality)}, ${
+      item.scoringCode ? sqlString(item.scoringCode) : "null"
+    }, ${sqlArray(aliases)})`;
+  })
   .join(",\n");
 
 const federationRows = federations

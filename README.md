@@ -71,11 +71,28 @@ Preencha:
 | `NEXT_PUBLIC_SUPABASE_URL` | Para dados reais | URL do projeto |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Para dados reais | Chave anon. Pode ir no cliente; a RLS protege os dados |
 | `NEXT_PUBLIC_APP_URL` | Não | Documentação e redirect |
-| `OPENAI_API_KEY` | Não | Texto e áudio |
-| `OPENAI_PARSE_MODEL` | Não | Padrão `gpt-4o-mini` |
-| `OPENAI_TRANSCRIBE_MODEL` | Não | Padrão `whisper-1` |
+| `DEEPSEEK_API_KEY` | Não | Leitura do texto (extração). Sem ela, o formulário manual segue e o texto avisa |
+| `DEEPSEEK_MODEL` | Não | Padrão `deepseek-flash` |
+| `DEEPSEEK_BASE_URL` | Não | Padrão `https://api.deepseek.com` |
+| `STT_PROVIDER` | Não | `openai` (padrão) ou `groq`. A DeepSeek não transcreve áudio |
+| `OPENAI_API_KEY` | Não | Transcrição quando `STT_PROVIDER=openai` |
+| `OPENAI_TRANSCRIBE_MODEL` | Não | Padrão `whisper-1`. Também aceita `gpt-4o-transcribe` |
+| `GROQ_API_KEY` | Não | Transcrição quando `STT_PROVIDER=groq` |
+| `GROQ_TRANSCRIBE_MODEL` | Não | Padrão `whisper-large-v3-turbo` |
 
 Não commite `.env.local`. A chave **service_role** não é usada pelo app.
+
+### Texto e áudio
+
+A extração do relato usa a API compatível com OpenAI da DeepSeek, em `https://api.deepseek.com/chat/completions`. O id verificado na documentação oficial ([Your First API Call](https://api-docs.deepseek.com/) e [Models & Pricing](https://api-docs.deepseek.com/quick_start/pricing/)) é `deepseek-flash`, servido pelo DeepSeek-V4.1-Flash-1017. O nome antigo `deepseek-v4-flash` foi aposentado e só é aceito como apelido.
+
+A mesma documentação não oferece transcrição de áudio: os modelos aceitam texto e, no Flash, imagem. O áudio fica num provedor separado.
+
+- Texto: `DEEPSEEK_API_KEY`. Opcional `DEEPSEEK_MODEL` (padrão `deepseek-flash`).
+- Áudio com OpenAI: `STT_PROVIDER=openai` e `OPENAI_API_KEY`. O modelo padrão é `whisper-1`; `OPENAI_TRANSCRIBE_MODEL` pode ser `gpt-4o-transcribe`.
+- Áudio com Groq: `STT_PROVIDER=groq` e `GROQ_API_KEY`. O padrão é `whisper-large-v3-turbo`.
+
+Os dois caminhos recebem o glossário versionado em `src/data/glossary.ts`: o texto entra no prompt da DeepSeek, a transcrição recebe uma lista curta de termos para enviesar o reconhecimento, e um normalizador local corrige apelidos e erros como "hell hook" e "cross ash" mesmo se o modelo devolver o nome cru. Sem as chaves, texto e áudio mostram um aviso e o formulário manual continua.
 
 ## 5. Rodar localmente
 

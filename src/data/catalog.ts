@@ -12,6 +12,8 @@ export const techniques: Technique[] = [
   { id: "queda-lateral", name: "Queda lateral", category: "queda", modality: "both", scoringCode: "takedown", aliases: ["lateral drop", "queda lateral"] },
   { id: "guarda-puxada", name: "Guarda puxada", category: "queda", modality: "both", scoringCode: null, aliases: ["pull guard", "guarda puxada", "puxei a guarda"] },
   { id: "arm-drag", name: "Arm drag", category: "queda", modality: "both", scoringCode: null, aliases: ["arm drag", "arrasto de braço"] },
+  { id: "o-soto-gari", name: "O-soto-gari", category: "queda", modality: "both", scoringCode: "takedown", aliases: ["o soto gari", "osoto gari"] },
+  { id: "uchi-mata", name: "Uchi-mata", category: "queda", modality: "both", scoringCode: "takedown", aliases: ["uchi mata", "uchimata"] },
 
   { id: "raspagem-de-quadril", name: "Raspagem de quadril", category: "raspagem", modality: "both", scoringCode: "sweep", aliases: ["raspagem de quadril", "hip bump"] },
   { id: "raspagem-tesoura", name: "Raspagem tesoura", category: "raspagem", modality: "both", scoringCode: "sweep", aliases: ["tesoura", "scissor sweep", "raspagem tesoura"] },
@@ -57,6 +59,7 @@ export const techniques: Technique[] = [
   { id: "estrangulamento-canto", name: "Estrangulamento do canto", category: "finalizacao", modality: "both", scoringCode: null, aliases: ["canto choke", "estrangulamento do canto"] },
   { id: "loop-choke", name: "Loop choke", category: "finalizacao", modality: "gi", scoringCode: null, aliases: ["loop choke", "estrangulamento em alça"] },
   { id: "norte-sul", name: "Estrangulamento norte-sul", category: "finalizacao", modality: "both", scoringCode: null, aliases: ["north south choke", "norte sul", "estrangulamento norte-sul"] },
+  { id: "leg-lock", name: "Leg lock", category: "finalizacao", modality: "nogi", scoringCode: null, aliases: ["leg lock", "chave de perna"] },
 
   { id: "montada", name: "Montada", category: "controle", modality: "both", scoringCode: "mount", aliases: ["montada", "mount"] },
   { id: "pegada-nas-costas", name: "Pegada nas costas", category: "controle", modality: "both", scoringCode: "back_control", aliases: ["costas", "pegada nas costas", "back take", "back control", "peguei as costas"] },
@@ -72,6 +75,9 @@ export const techniques: Technique[] = [
   { id: "guarda-aranha", name: "Guarda aranha", category: "controle", modality: "gi", scoringCode: null, aliases: ["spider guard", "guarda aranha"] },
   { id: "cinquenta-cinquenta", name: "50/50", category: "controle", modality: "nogi", scoringCode: null, aliases: ["50/50", "cinquenta cinquenta"] },
   { id: "ashi-garami", name: "Ashi garami", category: "controle", modality: "nogi", scoringCode: null, aliases: ["ashi", "ashi garami", "single leg x"] },
+  { id: "false-grip", name: "False grip", category: "controle", modality: "gi", scoringCode: null, aliases: ["false grip", "pegada falsa"] },
+  { id: "cross-ashi", name: "Cross ashi", category: "controle", modality: "nogi", scoringCode: null, aliases: ["cross ashi"] },
+  { id: "saddle", name: "Saddle", category: "controle", modality: "nogi", scoringCode: null, aliases: ["saddle", "honey hole", "411"] },
 
   { id: "saida-de-montada", name: "Saída de montada", category: "escape", modality: "both", scoringCode: null, aliases: ["upa", "elbow escape", "saida de montada", "escape de montada"] },
   { id: "saida-das-costas", name: "Saída das costas", category: "escape", modality: "both", scoringCode: null, aliases: ["saida das costas", "escape das costas"] },

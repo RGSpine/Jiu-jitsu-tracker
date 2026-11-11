@@ -1,4 +1,4 @@
-import { matchTechnique } from "@/lib/match-technique";
+import { matchTechnique } from "@/lib/glossary-match";
 import type { Modality, Result, RolaDraft, SessionDraft, Technique } from "@/lib/types";
 
 export type ParsedRola = {
