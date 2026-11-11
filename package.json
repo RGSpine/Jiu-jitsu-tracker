@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test": "vitest run"
+    "test": "vitest run",
+    "icons": "node scripts/generate-icons.mjs",
+    "mobile:config": "node scripts/write-capacitor-config.mjs"
   },
   "dependencies": {
     "@supabase/ssr": "^0.12.7",

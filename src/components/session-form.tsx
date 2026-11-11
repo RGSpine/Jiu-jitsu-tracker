@@ -1,6 +1,7 @@
 "use client";
 
 import { useApp } from "@/components/providers";
+import { audioFileName, isIosUserAgent, preferredAudioMime } from "@/lib/audio-file";
 import { AUDIO_AI_UNAVAILABLE_MESSAGE, TEXT_AI_UNAVAILABLE_MESSAGE } from "@/lib/config";
 import { suggestPoints } from "@/lib/scoring";
 import { draftFromParsed, type ParsedSession } from "@/lib/parse-draft";
@@ -479,15 +480,28 @@ function AudioCapture({ onParsed }: { onParsed: (parsed: ParsedSession) => void 
     }
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find((type) => MediaRecorder.isTypeSupported(type));
-      const media = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      const ios = isIosUserAgent(navigator.userAgent);
+      const mime = typeof MediaRecorder.isTypeSupported === "function"
+        ? preferredAudioMime((type) => MediaRecorder.isTypeSupported(type), ios)
+        : (ios ? "audio/mp4" : undefined);
+      let media: MediaRecorder;
+      try {
+        media = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
+      } catch {
+        media = new MediaRecorder(stream);
+      }
       const chunks: Blob[] = [];
       media.ondataavailable = (event) => {
         if (event.data.size) chunks.push(event.data);
       };
       media.onstop = () => {
         stream.getTracks().forEach((track) => track.stop());
-        const blob = new Blob(chunks, { type: media.mimeType || "audio/webm" });
+        const type = media.mimeType || mime || (ios ? "audio/mp4" : "audio/webm");
+        const blob = new Blob(chunks, { type });
+        if (!blob.size) {
+          setError("Não captei áudio. Tente de novo.");
+          return;
+        }
         void transcribe(blob);
       };
       media.start();
@@ -508,7 +522,7 @@ function AudioCapture({ onParsed }: { onParsed: (parsed: ParsedSession) => void 
     setRecording(false);
     try {
       const form = new FormData();
-      form.append("audio", blob, "rola.webm");
+      form.append("audio", blob, audioFileName(blob.type));
       const response = await fetch("/api/transcrever", { method: "POST", body: form });
       const body = (await response.json()) as { error?: string; text?: string };
       if (!response.ok) throw new Error(body.error || "Não foi possível transcrever.");

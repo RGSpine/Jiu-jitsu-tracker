@@ -1,6 +1,7 @@
 "use client";
 
 import { AppHeader } from "@/components/app-header";
+import { InstallHint } from "@/components/install-hint";
 import { useApp } from "@/components/providers";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -27,6 +28,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="phone">
         <AppHeader />
         <div className="phone-main">
+          <InstallHint />
           {children}
         </div>
         <nav className="tabbar" aria-label="Principal">
@@ -54,7 +56,10 @@ export function Frame({ children }: { children: React.ReactNode }) {
     <div className="stage">
       <div className="phone">
         <AppHeader />
-        <div className="phone-main">{children}</div>
+        <div className="phone-main">
+          <InstallHint />
+          {children}
+        </div>
       </div>
     </div>
   );

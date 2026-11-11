@@ -75,6 +75,12 @@ a { color: inherit; }
   flex-direction: column;
   position: relative;
   box-shadow: 0 0 0 1px var(--line);
+  padding-top: env(safe-area-inset-top);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+}
+.phone:not(:has(.tabbar)) .phone-main {
+  padding-bottom: calc(18px + env(safe-area-inset-bottom));
 }
 .phone-main {
   flex: 1;
@@ -468,3 +474,26 @@ hr.sep { border: 0; border-top: 1px solid var(--line); margin: 8px 0; }
 .split-meter span:last-child { background: var(--ink); }
 .voice-row { display: grid; grid-template-columns: 96px 1fr; gap: 10px; align-items: center; }
 .quick-chips { display: flex; gap: 8px; overflow: auto; padding-bottom: 2px; }
+.install-card {
+  margin: 12px 16px 0;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: var(--paper);
+}
+.install-steps { display: flex; align-items: center; gap: 8px; }
+.install-step { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; font-size: 12px; font-weight: 750; }
+.install-glyph {
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
+  color: var(--accent);
+}
+.install-arrow { color: var(--muted); font-weight: 800; }
+.install-line { margin: 0; font-size: 13px; font-weight: 650; }

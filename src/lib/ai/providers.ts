@@ -1,3 +1,4 @@
+import { audioFileName } from "@/lib/audio-file";
 import { glossaryPrompt, sttVocabularyPrompt } from "@/lib/glossary-match";
 
 export const DEFAULT_DEEPSEEK_MODEL = "deepseek-flash";
@@ -94,6 +95,11 @@ export async function extractWithDeepSeek(text: string): Promise<unknown> {
   return completeJson(extractionSystemPrompt(), text);
 }
 
+function audioFilename(audio: File): string {
+  if (audio.name && /\.(webm|mp4|m4a|mp3|wav|ogg|aac)$/i.test(audio.name)) return audio.name;
+  return audioFileName(audio.type || "");
+}
+
 export async function transcribeAudio(audio: File): Promise<string> {
   const provider = sttProviderName();
   const model = sttModel();
@@ -103,7 +109,7 @@ export async function transcribeAudio(audio: File): Promise<string> {
     : "https://api.openai.com/v1/audio/transcriptions";
   const apiKey = provider === "groq" ? process.env.GROQ_API_KEY : process.env.OPENAI_API_KEY;
   const outbound = new FormData();
-  outbound.append("file", audio, audio.name || "rola.webm");
+  outbound.append("file", audio, audioFilename(audio));
   outbound.append("model", model);
   outbound.append("prompt", prompt);
   outbound.append("response_format", "json");
