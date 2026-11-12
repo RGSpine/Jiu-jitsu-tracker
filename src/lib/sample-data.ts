@@ -93,7 +93,9 @@ export function buildPersonalSample(options: {
     if (!dates.includes(iso)) dates.push(iso);
   }
   dates.sort();
-  const kept = dates;
+  const back = addDays(options.today, -18);
+  const away = addDays(back, -31);
+  const kept = dates.filter((date) => date <= away || date >= back);
 
   kept.forEach((date, sessionIndex) => {
     const progress = sessionIndex / Math.max(1, kept.length - 1);
@@ -180,6 +182,42 @@ export function buildPersonalSample(options: {
       });
     }
   });
+
+  const partner = options.linkedPartner ?? { id: "parceiro-vinculado", name: "Parceiro" };
+  const streakSession = uuid(serial);
+  serial += 1;
+  sessions.push({
+    id: streakSession,
+    userId: options.userId,
+    date: options.today,
+    modality: "nogi",
+    notes: "",
+    federationId,
+  });
+  for (let index = 0; index < 6; index += 1) {
+    const win = index === 5;
+    rolas.push({
+      id: uuid(serial),
+      sessionId: streakSession,
+      athleteId: options.userId,
+      athleteName: options.userName,
+      partnerUserId: partner.id,
+      partnerName: partner.name,
+      occurredOn: options.today,
+      modality: "nogi",
+      federationId,
+      durationMinutes: 6,
+      result: win ? "vitoria" : "derrota",
+      pointsAthlete: win ? 2 : 0,
+      pointsPartner: win ? 0 : 2,
+      advantagesAthlete: 0,
+      advantagesPartner: 0,
+      penaltiesAthlete: 0,
+      penaltiesPartner: 0,
+      actions: [],
+    });
+    serial += 1;
+  }
 
   return { sessions, rolas };
 }

@@ -21,6 +21,22 @@ export const PROGRESSION = {
   dailyCap: 150,
   questWeekCap: 60,
   attributeCap: 20,
+  /** Bônus único por título de superação. Fica fora do teto diário e do teto das missões. */
+  superacaoXp: 30,
+  pausaAdversidade: 21,
+  treinosAdversidade: 3,
+  janelaAdversidade: 14,
+  derrotasSeguidas: 5,
+  jejumRolas: 8,
+  pausaFenix: 60,
+  semanasFenix: 4,
+  treinosSemanaFenix: 2,
+  pausaRecomeco: 30,
+  persistenteDecididos: 3,
+  persistentePrazo: 2,
+  sobreviventeRolas: 5,
+  sobreviventeFinais: 3,
+  acertoVitorias: 3,
 } as const;
 
 export type AttributeId =
@@ -63,6 +79,7 @@ export type ProgressRola = {
   pointsFor: number;
   pointsAgainst?: number;
   result?: Result;
+  opponentUserId?: string | null;
   submissionsApplied: { id: string }[];
   submissionsSuffered: { id: string }[];
   techniquesUsed: { id: string; category?: Category }[];
@@ -176,11 +193,22 @@ export type QuestView = {
 
 export type SystemLogEntry = {
   id: string;
-  kind: "titulo" | "epiteto" | "atributo" | "posto" | "missao" | "surpresa";
+  kind: "titulo" | "epiteto" | "atributo" | "posto" | "missao" | "surpresa" | "superacao";
   body: string;
   occurredOn: string;
   read?: boolean;
 };
+
+export const SUPERACOES: { id: string; name: string; hint: string }[] = [
+  { id: "sup-adversidades", name: "O que supera as adversidades", hint: "Voltar e ficar" },
+  { id: "sup-derrota", name: "O que não se curva perante a derrota", hint: "Quebrar uma sequência ruim" },
+  { id: "sup-mare", name: "Virada de maré", hint: "Finalizar depois de um jejum" },
+  { id: "sup-fenix", name: "Fênix", hint: "Sumir e criar rotina" },
+  { id: "sup-recomeco", name: "Recomeço", hint: "O primeiro treino da volta" },
+  { id: "sup-persistente", name: "Persistente", hint: "Voltar logo depois de perder" },
+  { id: "sup-sobrevivente", name: "Sobrevivente", hint: "Sair inteiro no treino seguinte" },
+  { id: "sup-acerto", name: "Acerto de contas", hint: "Ganhar de quem te ganhava" },
+];
 
 export type LineView = {
   id: string;
@@ -205,6 +233,7 @@ export type ProgressView = {
   epithets: { id: string; label: string; hint: string; unlocked: boolean }[];
   quests: QuestView[];
   log: SystemLogEntry[];
+  superacoes: { id: string; name: string; hint: string; unlocked: boolean }[];
 };
 
 export type SystemEvent = {
@@ -584,7 +613,149 @@ function systemBody(kind: SystemLogEntry["kind"], label: string): string {
   if (kind === "atributo") return `[SISTEMA] ${label}`;
   if (kind === "posto") return `[SISTEMA] Novo posto: ${label}`;
   if (kind === "missao") return `[SISTEMA] Missão cumprida: ${label}`;
+  if (kind === "superacao") return `[SISTEMA] Título desbloqueado: ${label}`;
   return `[SISTEMA] Surpresa: ${label}`;
+}
+
+function orderedRolas(rolas: ProgressRola[], today: string): ProgressRola[] {
+  return rolas
+    .map((rola, index) => ({ rola, index }))
+    .filter((item) => item.rola.occurredOn <= today)
+    .sort((a, b) => a.rola.occurredOn.localeCompare(b.rola.occurredOn) || a.index - b.index)
+    .map((item) => item.rola);
+}
+
+function decided(result: Result | undefined): result is "vitoria" | "derrota" {
+  return result === "vitoria" || result === "derrota";
+}
+
+/** Pausa em dias entre dois treinos. 21 significa volta no 21º dia depois do último. */
+export function pauseDays(previous: string, next: string): number {
+  return daysBetween(previous, next);
+}
+
+export function superacaoUnlocks(rolas: ProgressRola[], today: string): SystemLogEntry[] {
+  const ordered = orderedRolas(rolas, today);
+  const found = new Map<string, SystemLogEntry>();
+  const note = (id: string, detail: string, occurredOn: string) => {
+    if (found.has(id)) return;
+    const item = SUPERACOES.find((entry) => entry.id === id);
+    if (!item) return;
+    found.set(id, { id, kind: "superacao", body: systemBody("superacao", `${item.name}. ${detail}`), occurredOn });
+  };
+
+  const dates = [...new Set(ordered.map((rola) => rola.occurredOn))];
+  for (let index = 1; index < dates.length; index += 1) {
+    const previous = dates[index - 1]!;
+    const current = dates[index]!;
+    const gap = pauseDays(previous, current);
+    if (gap >= PROGRESSION.pausaRecomeco) {
+      note("sup-recomeco", `Primeiro treino depois de ${gap} dias parado.`, current);
+    }
+    if (gap >= PROGRESSION.pausaAdversidade) {
+      const limit = addDays(current, PROGRESSION.janelaAdversidade - 1);
+      const seen = new Set<string>();
+      let when = current;
+      for (const rola of ordered) {
+        if (rola.occurredOn < current || rola.occurredOn > limit || seen.has(rola.sessionId)) continue;
+        seen.add(rola.sessionId);
+        when = rola.occurredOn;
+        if (seen.size >= PROGRESSION.treinosAdversidade) {
+          note("sup-adversidades", `${gap} dias parado, e ${seen.size} treinos na volta.`, when);
+          break;
+        }
+      }
+    }
+    if (gap >= PROGRESSION.pausaFenix) {
+      const week0 = startOfWeek(current);
+      let ready = true;
+      let when = current;
+      for (let week = 0; week < PROGRESSION.semanasFenix; week += 1) {
+        const start = addDays(week0, week * 7);
+        const end = addDays(start, 6);
+        const inWeek = ordered.filter((rola) => rola.occurredOn >= current && rola.occurredOn >= start && rola.occurredOn <= end);
+        const sessions = [...new Set(inWeek.map((rola) => rola.sessionId))];
+        if (sessions.length < PROGRESSION.treinosSemanaFenix) {
+          ready = false;
+          break;
+        }
+        const counts = new Map<string, string>();
+        for (const rola of inWeek) if (!counts.has(rola.sessionId)) counts.set(rola.sessionId, rola.occurredOn);
+        when = [...counts.values()].sort()[PROGRESSION.treinosSemanaFenix - 1] ?? when;
+      }
+      if (ready) note("sup-fenix", `${gap} dias parado, e 4 semanas firmes.`, when);
+    }
+  }
+
+  let losses = 0;
+  let dry: ProgressRola[] = [];
+  const rivalLosses = new Map<string, number>();
+  for (const rola of ordered) {
+    const finished = rola.submissionsApplied.length > 0;
+    if (!finished) dry.push(rola);
+    else {
+      const lost = dry.filter((item) => item.result === "derrota").length;
+      if (dry.length >= PROGRESSION.jejumRolas && lost > dry.length / 2) {
+        note("sup-mare", `${dry.length} rolas sem finalizar, a maioria perdida, e você finalizou.`, rola.occurredOn);
+      }
+      dry = [];
+    }
+    if (!decided(rola.result)) continue;
+    if (rola.result === "derrota") losses += 1;
+    else {
+      if (losses >= PROGRESSION.derrotasSeguidas) {
+        note("sup-derrota", `${losses} derrotas seguidas, e você voltou a vencer.`, rola.occurredOn);
+      }
+      losses = 0;
+    }
+    if (!rola.opponentUserId) continue;
+    if (rola.result === "derrota") rivalLosses.set(rola.opponentUserId, (rivalLosses.get(rola.opponentUserId) ?? 0) + 1);
+    else {
+      if ((rivalLosses.get(rola.opponentUserId) ?? 0) >= PROGRESSION.acertoVitorias) {
+        note("sup-acerto", "Venceu quem te vencia seguido.", rola.occurredOn);
+      }
+      rivalLosses.set(rola.opponentUserId, 0);
+    }
+  }
+
+  const byDate = new Map<string, ProgressRola[]>();
+  for (const rola of ordered) {
+    const list = byDate.get(rola.occurredOn) ?? [];
+    list.push(rola);
+    byDate.set(rola.occurredOn, list);
+  }
+  const dayList = [...byDate.keys()];
+  for (let index = 0; index < dayList.length; index += 1) {
+    const date = dayList[index]!;
+    const group = byDate.get(date) ?? [];
+    const results = group.filter((rola) => decided(rola.result));
+    const bad = results.length >= PROGRESSION.persistenteDecididos && results.every((rola) => rola.result === "derrota");
+    if (!bad) continue;
+    const follow = dayList.slice(index + 1).find((next) => {
+      const gap = pauseDays(date, next);
+      return gap >= 1 && gap <= PROGRESSION.persistentePrazo;
+    });
+    if (follow) note("sup-persistente", "Perdeu o treino e voltou em seguida.", follow);
+  }
+
+  const sessions: { id: string; date: string; rolas: ProgressRola[] }[] = [];
+  for (const rola of ordered) {
+    const last = sessions.at(-1);
+    if (!last || last.id !== rola.sessionId) sessions.push({ id: rola.sessionId, date: rola.occurredOn, rolas: [rola] });
+    else last.rolas.push(rola);
+  }
+  for (let index = 0; index < sessions.length - 1; index += 1) {
+    const current = sessions[index]!;
+    const suffered = current.rolas.reduce((sum, rola) => sum + rola.submissionsSuffered.length, 0);
+    if (suffered < PROGRESSION.sobreviventeFinais) continue;
+    const next = sessions[index + 1]!;
+    const nextSuffered = next.rolas.reduce((sum, rola) => sum + rola.submissionsSuffered.length, 0);
+    if (next.rolas.length >= PROGRESSION.sobreviventeRolas && nextSuffered === 0) {
+      note("sup-sobrevivente", "Apanhou finalização e no treino seguinte saiu inteiro.", next.date);
+    }
+  }
+
+  return [...found.values()];
 }
 
 function addTotals(totals: Totals, day: DayBucket): void {
@@ -605,7 +776,7 @@ function addTotals(totals: Totals, day: DayBucket): void {
   for (const id of Object.keys(day.families) as AttributeId[]) totals.families[id] += day.families[id];
 }
 
-function replay(days: DayBucket[], today: string): { log: SystemLogEntry[]; xp: number } {
+function replay(days: DayBucket[], rolas: ProgressRola[], today: string): { log: SystemLogEntry[]; xp: number } {
   const totals = emptyTotals();
   const weeks = new Map<string, number>();
   const latched = new Set<string>();
@@ -614,15 +785,20 @@ function replay(days: DayBucket[], today: string): { log: SystemLogEntry[]; xp: 
   let xp = 0;
   const log: SystemLogEntry[] = [];
   const questsDone = new Set<string>();
+  const comebacks = superacaoUnlocks(rolas, today);
   const push = (id: string, kind: SystemLogEntry["kind"], label: string, occurredOn: string) => {
     if (latched.has(id)) return;
     latched.add(id);
+    if (kind === "superacao") xp += PROGRESSION.superacaoXp;
     log.push({ id, kind, body: systemBody(kind, label), occurredOn });
   };
 
   days.forEach((day, index) => {
     if (day.date > today) return;
     xp += dayXp(day, ritmoBonus(days, index));
+    for (const entry of comebacks) {
+      if (entry.occurredOn === day.date) push(entry.id, "superacao", entry.body.replace("[SISTEMA] Título desbloqueado: ", ""), day.date);
+    }
     addTotals(totals, day);
     const week = startOfWeek(day.date);
     weeks.set(week, (weeks.get(week) ?? 0) + day.sessions.size);
@@ -667,7 +843,7 @@ function replay(days: DayBucket[], today: string): { log: SystemLogEntry[]; xp: 
 
 export function buildProgress(rolas: ProgressRola[], today: string): ProgressView {
   const days = buckets(rolas);
-  const played = replay(days, today);
+  const played = replay(days, rolas, today);
   let xp = played.xp;
   const first = days[0]?.date ?? today;
   let cursor = startOfWeek(first);
@@ -724,14 +900,28 @@ export function buildProgress(rolas: ProgressRola[], today: string): ProgressVie
     attributes: ATTRIBUTES.map((item) => ({ ...item, level: levels[item.id] })),
     lines,
     titles,
-    epithets: EPITHETS.map((item) => ({
+    epithets: [
+      ...EPITHETS.map((item) => ({
+        id: item.id,
+        label: item.label,
+        hint: item.hint,
+        unlocked: earned.has(item.id),
+      })),
+      ...SUPERACOES.filter((item) => earned.has(item.id)).map((item) => ({
+        id: item.id,
+        label: item.name,
+        hint: item.hint,
+        unlocked: true,
+      })),
+    ],
+    quests: currentQuests,
+    log: played.log,
+    superacoes: SUPERACOES.map((item) => ({
       id: item.id,
-      label: item.label,
+      name: earned.has(item.id) ? item.name : "???",
       hint: item.hint,
       unlocked: earned.has(item.id),
     })),
-    quests: currentQuests,
-    log: played.log,
   };
 }
 

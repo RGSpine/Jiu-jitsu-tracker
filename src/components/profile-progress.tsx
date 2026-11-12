@@ -118,6 +118,19 @@ export function ProfileProgress() {
         ))}
       </section>
 
+      <section id="superacao" className="stack" aria-label="Superação">
+        <h2>Superação</h2>
+        <div className="skill-grid">
+          {view.superacoes.map((item) => (
+            <article key={item.id} className={item.unlocked ? "skill-on" : "skill-off"}>
+              <span className="skill-mark" aria-hidden="true">{item.unlocked ? "▲" : ""}</span>
+              <strong>{item.name}</strong>
+              <span>{item.hint}</span>
+            </article>
+          ))}
+        </div>
+      </section>
+
       <section aria-label="Habilidades">
         <h2>Habilidades</h2>
         <div className="skill-grid">
@@ -173,6 +186,9 @@ function asProgress(rola: PerspectiveRola): ProgressRola {
     durationMinutes: rola.durationMinutes,
     sessionId: rola.sessionId,
     pointsFor: rola.pointsFor,
+    pointsAgainst: rola.pointsAgainst,
+    result: rola.result,
+    opponentUserId: rola.opponentUserId,
     submissionsApplied: rola.submissionsApplied,
     submissionsSuffered: rola.submissionsSuffered,
     techniquesUsed: rola.techniquesUsed,
@@ -188,6 +204,11 @@ function previewEventsFor(preview: string | null, view: ProgressView): SystemEve
       title ? { id: "preview-titulo", kind: "titulo", body: `[SISTEMA] Novo título adquirido: ${title.title}` } : { id: "preview-posto", kind: "posto", body: `[SISTEMA] Novo posto: ${view.rank}` },
       epithet ? { id: "preview-epiteto", kind: "epiteto", body: `[SISTEMA] Novo epíteto: ${epithet.label}` } : { id: "preview-nivel", kind: "posto", body: `[SISTEMA] Novo posto: ${view.rank}` },
     ];
+  }
+  if (preview === "superacao") {
+    const entry = view.log.find((item) => item.kind === "superacao");
+    if (!entry) return undefined;
+    return [{ id: entry.id, kind: "superacao", body: entry.body }];
   }
   if (preview === "titulo" && title) return [{ id: title.id, kind: "titulo", body: `[SISTEMA] Novo título adquirido: ${title.title}` }];
   if (preview === "nivel") return [{ id: "preview-posto", kind: "posto", body: `[SISTEMA] Novo posto: ${view.rank}` }];

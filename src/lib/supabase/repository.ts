@@ -455,7 +455,7 @@ export function browserRepository() {
       fail(error, "Não foi possível abrir o registro.");
       return (data ?? []).map((row) => ({
         id: row.id as string,
-        kind: row.kind as "titulo" | "epiteto" | "atributo" | "posto" | "missao" | "surpresa",
+        kind: row.kind as SystemLogEntry["kind"],
         body: row.body as string,
         occurredOn: row.occurred_on as string,
         read: Boolean(row.read_at),

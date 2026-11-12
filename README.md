@@ -169,6 +169,23 @@ node --experimental-strip-types scripts/render-seed.mjs
 
 e reaplique o SQL.
 
+## Progressão
+
+O nível, os atributos e os títulos saem dos rolas já registrados. O posto (Centelha, Brasa, Aço, Lâmina, Núcleo, Ápice) não é a faixa. Chave de braço entra no XP e na linha de finalização, sem atributo próprio.
+
+Superação são oito títulos ocultos, cada um uma vez. O bônus é 30 XP, fora do teto diário e do teto das missões. Equipar um substitui o epíteto.
+
+- O que supera as adversidades: volta com 21 dias ou mais sem treinar e 3 treinos nos 14 dias a partir dessa volta.
+- O que não se curva perante a derrota: uma vitória depois de 5 derrotas decididas seguidas. Empate não conta e não quebra.
+- Virada de maré: finalizar depois de 8 rolas seguidos sem finalizar, com derrota na maioria deles.
+- Fênix: pausa de 60 dias ou mais e, em seguida, 4 semanas com pelo menos 2 treinos.
+- Recomeço: o primeiro treino depois de 30 dias ou mais parado.
+- Persistente: treinar 1 ou 2 dias depois de um treino com 3 rolas decididos, todos perdidos.
+- Sobrevivente: no treino seguinte a um em que foi finalizado 3 vezes, fazer 5 rolas sem ser finalizado.
+- Acerto de contas: vencer um parceiro vinculado que tinha vencido os 3 rolas decididos anteriores contra você.
+
+A pausa é a distância entre as datas: 30 dias entra, 29 não.
+
 ## Privacidade
 
 Cada pessoa vê os próprios treinos e os rolas dos quais participou. As políticas estão na migration. Não use a service role no navegador.
