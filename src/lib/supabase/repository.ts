@@ -36,6 +36,8 @@ type RolaRow = {
   modality: Modality;
   federation_id: string;
   duration_seconds: number;
+  simulation?: boolean;
+  started_standing?: boolean;
   result: StoredRola["result"];
   points_athlete: number;
   points_partner: number;
@@ -62,6 +64,10 @@ type ProfileRow = {
   stripes: number;
   academy: string;
   preferred_modality: Modality;
+  username?: string | null;
+  discoverable?: boolean;
+  is_competitor?: boolean;
+  primary_team_id?: string | null;
 };
 
 function fail(error: { message: string } | null, message: string): void {
@@ -82,6 +88,8 @@ function mapRola(row: RolaRow): StoredRola {
     modality: row.modality,
     federationId: row.federation_id,
     durationMinutes: Math.round(row.duration_seconds / 60),
+    simulation: Boolean(row.simulation),
+    startedStanding: Boolean(row.started_standing),
     result: row.result,
     pointsAthlete: row.points_athlete,
     pointsPartner: row.points_partner,
@@ -106,6 +114,10 @@ function mapProfile(row: ProfileRow, email: string): Profile {
     stripes: row.stripes,
     academy: row.academy ?? "",
     preferredModality: row.preferred_modality,
+    username: row.username ?? undefined,
+    discoverable: Boolean(row.discoverable),
+    isCompetitor: Boolean(row.is_competitor),
+    primaryTeamId: row.primary_team_id ?? null,
   };
 }
 
@@ -123,7 +135,7 @@ export function browserRepository() {
     if (!user) return null;
     const { data, error } = await supabase
       .from("profiles")
-      .select("id, display_name, belt, stripes, academy, preferred_modality")
+      .select("id, display_name, belt, stripes, academy, preferred_modality, username, discoverable, is_competitor, primary_team_id")
       .eq("id", user.id)
       .maybeSingle();
     fail(error, "Não foi possível carregar o perfil.");
@@ -189,7 +201,7 @@ export function browserRepository() {
     const { data, error } = await supabase
       .from("rolas")
       .select(
-        `id, session_id, athlete_id, athlete_name, partner_user_id, partner_name, occurred_on, modality, federation_id, duration_seconds, result, points_athlete, points_partner, advantages_athlete, advantages_partner, penalties_athlete, penalties_partner, actions:rola_actions(technique_id, performer, action_type)`,
+        `id, session_id, athlete_id, athlete_name, partner_user_id, partner_name, occurred_on, modality, federation_id, duration_seconds, simulation, started_standing, result, points_athlete, points_partner, advantages_athlete, advantages_partner, penalties_athlete, penalties_partner, actions:rola_actions(technique_id, performer, action_type)`,
       )
       .order("occurred_on", { ascending: false });
     fail(error, "Não foi possível carregar os rolas.");
@@ -227,9 +239,10 @@ export function browserRepository() {
       return { id: user.id, email: user.email ?? "" };
     },
     loadProfile,
-    async updateProfile(patch: Pick<Profile, "displayName" | "belt" | "stripes" | "academy" | "preferredModality">) {
+    async updateProfile(patch: Pick<Profile, "displayName" | "belt" | "stripes" | "academy" | "preferredModality"> & Partial<Pick<Profile, "username" | "discoverable" | "isCompetitor">>) {
       const user = await currentUser();
       if (!user) throw new Error("Entre na sua conta para continuar.");
+      const username = patch.username?.trim().toLowerCase();
       const { error } = await supabase
         .from("profiles")
         .update({
@@ -238,6 +251,9 @@ export function browserRepository() {
           stripes: patch.stripes,
           academy: patch.academy.trim(),
           preferred_modality: patch.preferredModality,
+          ...(patch.username === undefined ? {} : { username: username || null }),
+          ...(patch.discoverable === undefined ? {} : { discoverable: patch.discoverable }),
+          ...(patch.isCompetitor === undefined ? {} : { is_competitor: patch.isCompetitor }),
         })
         .eq("id", user.id);
       fail(error, "Não foi possível salvar o perfil.");
@@ -276,7 +292,7 @@ export function browserRepository() {
       const rolaResult = await supabase
         .from("rolas")
         .select(
-          `id, session_id, athlete_id, athlete_name, partner_user_id, partner_name, occurred_on, modality, federation_id, duration_seconds, result, points_athlete, points_partner, advantages_athlete, advantages_partner, penalties_athlete, penalties_partner, actions:rola_actions(technique_id, performer, action_type)`,
+          `id, session_id, athlete_id, athlete_name, partner_user_id, partner_name, occurred_on, modality, federation_id, duration_seconds, simulation, started_standing, result, points_athlete, points_partner, advantages_athlete, advantages_partner, penalties_athlete, penalties_partner, actions:rola_actions(technique_id, performer, action_type)`,
         )
         .eq("session_id", sessionId);
       fail(rolaResult.error, "Não foi possível abrir os rolas.");
@@ -295,7 +311,7 @@ export function browserRepository() {
       const { data, error } = await supabase
         .from("rolas")
         .select(
-          `id, session_id, athlete_id, athlete_name, partner_user_id, partner_name, occurred_on, modality, federation_id, duration_seconds, result, points_athlete, points_partner, advantages_athlete, advantages_partner, penalties_athlete, penalties_partner, actions:rola_actions(technique_id, performer, action_type)`,
+          `id, session_id, athlete_id, athlete_name, partner_user_id, partner_name, occurred_on, modality, federation_id, duration_seconds, simulation, started_standing, result, points_athlete, points_partner, advantages_athlete, advantages_partner, penalties_athlete, penalties_partner, actions:rola_actions(technique_id, performer, action_type)`,
         )
         .eq("id", rolaId)
         .maybeSingle();
@@ -325,6 +341,8 @@ export function browserRepository() {
             techniquesUsed: rola.techniquesUsed,
             submissionsApplied: rola.submissionsApplied,
             submissionsSuffered: rola.submissionsSuffered,
+            simulation: Boolean(rola.simulation),
+            startedStanding: Boolean(rola.startedStanding),
           })),
         },
       });
@@ -377,6 +395,8 @@ export function browserRepository() {
                 techniquesUsed: draft.techniquesUsed,
                 submissionsApplied: draft.submissionsApplied,
                 submissionsSuffered: draft.submissionsSuffered,
+                simulation: Boolean(draft.simulation),
+                startedStanding: Boolean(draft.startedStanding),
               };
             }),
           },

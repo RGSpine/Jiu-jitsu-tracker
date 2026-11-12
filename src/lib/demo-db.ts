@@ -10,16 +10,28 @@ import {
   DEMO_LUCAS_ID,
   DEMO_ROBERTO_ID,
 } from "@/lib/sample-data";
+import {
+  attendanceSessions,
+  demoCompetitions,
+  demoPlan,
+  demoTeam,
+  EXTRA_PROFILES,
+} from "@/lib/sample-social";
 import type {
   Belt,
+  Competition,
+  CompetitionMatch,
   Modality,
   PartnerHit,
   PerspectiveRola,
+  PrepPlan,
   Profile,
   SessionDraft,
   SessionSummary,
   StoredRola,
   StoredSession,
+  Team,
+  TeamMember,
 } from "@/lib/types";
 import { actionsFromDraft } from "@/lib/perspective";
 
@@ -32,6 +44,11 @@ export type DemoDb = {
   sessions: StoredSession[];
   rolas: StoredRola[];
   systemLogs?: Record<string, { ready: boolean; entries: SystemLogEntry[] }>;
+  teams?: Team[];
+  members?: TeamMember[];
+  competitions?: Competition[];
+  matches?: CompetitionMatch[];
+  plans?: PrepPlan[];
 };
 
 const SEED_PROFILES: Profile[] = [
@@ -44,6 +61,9 @@ const SEED_PROFILES: Profile[] = [
     academy: "Academia Sul",
     preferredModality: "nogi",
     shareProgress: true,
+    username: "roberto",
+    discoverable: true,
+    isCompetitor: true,
   },
   {
     id: DEMO_ANA_ID,
@@ -53,6 +73,9 @@ const SEED_PROFILES: Profile[] = [
     stripes: 3,
     academy: "Academia Sul",
     preferredModality: "nogi",
+    username: "ana",
+    discoverable: true,
+    shareProgress: true,
   },
   {
     id: DEMO_LUCAS_ID,
@@ -62,7 +85,11 @@ const SEED_PROFILES: Profile[] = [
     stripes: 1,
     academy: "CT Nova Guarda",
     preferredModality: "gi",
+    username: "lucas",
+    discoverable: true,
+    shareProgress: true,
   },
+  ...EXTRA_PROFILES,
 ];
 
 export function createSeed(today = todayIso()): DemoDb {
@@ -76,12 +103,26 @@ export function createSeed(today = todayIso()): DemoDb {
     linkEvery: 5,
   });
   const incoming = buildIncomingFromPartner(today);
+  const social = demoTeam(today);
+  const events = demoCompetitions();
   return {
     version: 1,
     currentUserId: null,
-    profiles: SEED_PROFILES.map((profile) => ({ ...profile })),
-    sessions: [...roberto.sessions, ...incoming.sessions],
-    rolas: [...roberto.rolas, ...incoming.rolas],
+    profiles: SEED_PROFILES.map((profile) => ({
+      ...profile,
+      primaryTeamId: profile.id === DEMO_ROBERTO_ID ? social.team.id : null,
+    })),
+    sessions: [...roberto.sessions, ...incoming.sessions, ...attendanceSessions(today)],
+    rolas: [...roberto.rolas, ...incoming.rolas].map((rola, index) => (
+      rola.athleteId === DEMO_ROBERTO_ID && rola.occurredOn >= "2026-11-01" && index % 4 === 0
+        ? { ...rola, simulation: true, startedStanding: true }
+        : rola
+    )),
+    teams: [social.team],
+    members: social.members,
+    competitions: events.competitions,
+    matches: events.matches,
+    plans: [demoPlan()],
   };
 }
 
@@ -92,12 +133,21 @@ export function loadDemoDb(): DemoDb {
   try {
     const parsed = JSON.parse(raw) as DemoDb;
     if (parsed.version !== 1 || !Array.isArray(parsed.profiles)) return createSeed();
+    const seed = parsed.teams ? null : createSeed();
     return {
       ...parsed,
       profiles: parsed.profiles.map((profile) => ({
         ...profile,
         shareProgress: profile.shareProgress ?? profile.id === DEMO_ROBERTO_ID,
+        username: profile.username ?? seed?.profiles.find((item) => item.id === profile.id)?.username,
+        discoverable: profile.discoverable ?? seed?.profiles.find((item) => item.id === profile.id)?.discoverable ?? false,
+        isCompetitor: profile.isCompetitor ?? profile.id === DEMO_ROBERTO_ID,
       })),
+      teams: parsed.teams ?? seed?.teams,
+      members: parsed.members ?? seed?.members,
+      competitions: parsed.competitions ?? seed?.competitions,
+      matches: parsed.matches ?? seed?.matches,
+      plans: parsed.plans ?? seed?.plans,
     };
   } catch {
     return createSeed();
@@ -214,9 +264,14 @@ export function demoPublicBadge(db: DemoDb, userId: string, today: string): { le
 
 export function demoUpdateProfile(
   db: DemoDb,
-  patch: Pick<Profile, "displayName" | "belt" | "stripes" | "academy" | "preferredModality">,
+  patch: Pick<Profile, "displayName" | "belt" | "stripes" | "academy" | "preferredModality"> & Partial<Pick<Profile, "username" | "discoverable" | "isCompetitor">>,
 ): DemoDb {
   const me = requireUser(db);
+  const username = patch.username?.trim().toLowerCase() || undefined;
+  if (username && !/^[a-z0-9_]{3,20}$/.test(username)) throw new Error("Usuário: 3 a 20 letras, números ou _.");
+  if (username && db.profiles.some((profile) => profile.id !== me.id && profile.username === username)) {
+    throw new Error("Esse usuário já está em uso.");
+  }
   return {
     ...db,
     profiles: db.profiles.map((profile) =>
@@ -228,6 +283,9 @@ export function demoUpdateProfile(
             stripes: patch.stripes,
             academy: patch.academy.trim(),
             preferredModality: patch.preferredModality,
+            username: patch.username === undefined ? profile.username : username,
+            discoverable: patch.discoverable ?? profile.discoverable ?? false,
+            isCompetitor: patch.isCompetitor ?? profile.isCompetitor ?? false,
           }
         : profile,
     ),
@@ -277,6 +335,8 @@ function rolaFromDraft(session: StoredSession, draft: SessionDraft["rolas"][numb
     penaltiesAthlete: draft.penaltiesFor,
     penaltiesPartner: draft.penaltiesAgainst,
     actions: actionsFromDraft(draft),
+    simulation: Boolean(draft.simulation),
+    startedStanding: Boolean(draft.startedStanding),
   };
 }
 

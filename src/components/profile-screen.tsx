@@ -4,6 +4,7 @@ import { ProfileProgress } from "@/components/profile-progress";
 import { useApp } from "@/components/providers";
 import { BELT_OPTIONS, beltLabel } from "@/lib/labels";
 import type { Belt, Modality } from "@/lib/types";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 export function ProfileScreen() {
@@ -27,6 +28,9 @@ function ProfileForm() {
   const [stripes, setStripes] = useState(profile?.stripes ?? 0);
   const [academy, setAcademy] = useState(profile?.academy ?? "");
   const [modality, setModality] = useState<Modality>(profile?.preferredModality ?? "nogi");
+  const [username, setUsername] = useState(profile?.username ?? "");
+  const [discoverable, setDiscoverable] = useState(Boolean(profile?.discoverable));
+  const [competitor, setCompetitor] = useState(Boolean(profile?.isCompetitor));
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -46,6 +50,9 @@ function ProfileForm() {
         stripes,
         academy,
         preferredModality: modality,
+        username,
+        discoverable,
+        isCompetitor: competitor,
       });
       setMessage("Perfil salvo.");
     } catch (caught) {
@@ -61,6 +68,9 @@ function ProfileForm() {
         <p className="eyebrow">Perfil</p>
         <h1>{profile.displayName}</h1>
         <p className="lede">Faixa real: {beltLabel(profile.belt)} · {profile.stripes} graus</p>
+        <div className="row mt">
+          <Link className="btn btn-ghost" href="/equipe">Equipe</Link>
+        </div>
       </header>
       <div className="pad stack">
         <ProfileProgress />
@@ -83,6 +93,15 @@ function ProfileForm() {
           </select>
         </label>
         <label className="field"><span>Academia</span><input value={academy} onChange={(event) => setAcademy(event.target.value)} /></label>
+        <label className="field"><span>Usuário</span><input value={username} onChange={(event) => setUsername(event.target.value.toLowerCase())} placeholder="nome.tatame" autoCapitalize="none" /></label>
+        <label className="share-row">
+          <input type="checkbox" checked={discoverable} onChange={(event) => setDiscoverable(event.target.checked)} />
+          <span>Aparecer na busca da equipe</span>
+        </label>
+        <label className="share-row">
+          <input type="checkbox" checked={competitor} onChange={(event) => setCompetitor(event.target.checked)} />
+          <span>Sou competidor</span>
+        </label>
         <div className="choice-row">
           <button type="button" className={`mode${modality === "nogi" ? " mode-on" : ""}`} onClick={() => setModality("nogi")}>No-gi</button>
           <button type="button" className={`mode${modality === "gi" ? " mode-on" : ""}`} onClick={() => setModality("gi")}>Kimono</button>

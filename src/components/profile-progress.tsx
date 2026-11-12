@@ -3,7 +3,7 @@
 import { useApp } from "@/components/providers";
 import { todayIso } from "@/lib/dates";
 import { factsHold } from "@/lib/insights";
-import { buildProgress, epithetFor, presentation, titleFor, type ProgressRola, type ProgressView, type SystemEvent, type SystemLogEntry } from "@/lib/progression";
+import { buildProgress, epithetFor, levelFromXp, presentation, titleFor, type ProgressRola, type ProgressView, type SystemEvent, type SystemLogEntry } from "@/lib/progression";
 import type { PerspectiveRola } from "@/lib/types";
 import { useEffect, useState } from "react";
 import { rememberProgress, SystemToast } from "@/components/system-toast";
@@ -19,6 +19,8 @@ export function ProfileProgress() {
   const [unread, setUnread] = useState(0);
   const [preview, setPreview] = useState<string | null>(null);
   const [note, setNote] = useState<string | null>(null);
+  const [bonus, setBonus] = useState(0);
+  const [extraTitles, setExtraTitles] = useState<{ id: string; title: string }[]>([]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => setPreview(new URLSearchParams(window.location.search).get("sistema")), 0);
@@ -27,7 +29,11 @@ export function ProfileProgress() {
       if (!alive) return;
       const next = buildProgress(rolas.map(asProgress), todayIso());
       setView(next);
-      const announced = await app.syncLog(next.log);
+      const social = await app.socialSnapshot();
+      if (!alive) return;
+      setBonus(social.bonusXp);
+      setExtraTitles(social.titles);
+      const announced = await app.syncLog([...next.log, ...social.log]);
       if (!alive) return;
       if (announced.length) rememberProgress(announced.map((entry) => ({ id: entry.id, kind: entry.kind, body: entry.body })));
       const stored = await app.loadLog();
@@ -62,7 +68,9 @@ export function ProfileProgress() {
   }, [view]);
 
   if (!view || !app.profile) return <div className="skeleton" />;
-  const equipped = titleFor(view, titleId);
+  const socialTitle = extraTitles.find((item) => item.id === titleId)?.title;
+  const equipped = socialTitle ?? titleFor(view, titleId);
+  const level = levelFromXp(view.xp + bonus);
   const epithet = epithetFor(view, epithetId);
   const previewEvents = previewEventsFor(preview, view);
 
@@ -72,7 +80,7 @@ export function ProfileProgress() {
       await app.saveProgress({
         shareProgress: share,
         equippedTitleId: titleId,
-        publicLevel: view!.level,
+        publicLevel: levelFromXp(view!.xp + bonus).level,
         publicTitle: titleFor(view!, titleId) ?? "",
         equippedEpithetId: epithetId,
         publicEpithet: epithetFor(view!, epithetId) ?? "",
@@ -91,14 +99,14 @@ export function ProfileProgress() {
         <div className="spread">
           <div>
             <span className="stat-label">Nível</span>
-            <div className="stat-value">{view.level}</div>
+            <div className="stat-value">{level.level}</div>
           </div>
-          <div className="rank-badge">{view.rank}</div>
+          <div className="rank-badge">{level.rank}</div>
         </div>
-        <div className="xp-track" aria-label={`${view.into} de ${view.need} XP`}>
-          <span style={{ width: `${Math.min(100, (view.into / view.need) * 100)}%` }} />
+        <div className="xp-track" aria-label={`${level.into} de ${level.need} XP`}>
+          <span style={{ width: `${Math.min(100, (level.into / level.need) * 100)}%` }} />
         </div>
-        <p className="sub">{view.into}/{view.need} XP · posto de jogo, não é a faixa</p>
+        <p className="sub">{level.into}/{level.need} XP · posto de jogo, não é a faixa</p>
         <p className="equipped">{presentation(app.profile.displayName, epithet)}</p>
         {equipped ? <p className="sub">{equipped}</p> : null}
       </article>
@@ -160,6 +168,7 @@ export function ProfileProgress() {
         <select value={titleId ?? ""} onChange={(event) => setTitleId(event.target.value || null)}>
           <option value="">Automático</option>
           {view.titles.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
+          {extraTitles.map((item) => <option key={item.id} value={item.id}>{item.title}</option>)}
         </select>
       </label>
       <label className="field">

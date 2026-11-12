@@ -8,11 +8,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
-const TABS = [
+const BASE_TABS = [
   { href: "/painel", label: "Painel" },
   { href: "/treinos", label: "Treinos" },
   { href: "/treinos/novo", label: "Anotar" },
-  { href: "/perfil", label: "Perfil" },
 ] as const;
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -33,13 +32,15 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {children}
         </div>
         <SystemToast />
-        <nav className="tabbar" aria-label="Principal">
-          {TABS.map((tab) => {
+        <nav className={`tabbar${app.profile?.isCompetitor ? " tabbar-5" : ""}`} aria-label="Principal">
+          {[...BASE_TABS, ...(app.profile?.isCompetitor ? [{ href: "/competidor", label: "Competidor" }] : []), { href: "/perfil", label: "Perfil" }].map((tab) => {
             const active = tab.href === "/treinos/novo"
               ? pathname === "/treinos/novo"
               : tab.href === "/treinos"
                 ? pathname === "/treinos" || /^\/treinos\/(?!novo$).+/.test(pathname)
-                : pathname === tab.href;
+                : tab.href === "/competidor"
+                  ? pathname.startsWith("/competidor")
+                  : pathname === tab.href;
             const className = `tab${active ? " tab-active" : ""}${tab.href === "/treinos/novo" ? " tab-new" : ""}`;
             return (
               <Link key={tab.href} href={tab.href} className={className}>

@@ -193,7 +193,7 @@ export type QuestView = {
 
 export type SystemLogEntry = {
   id: string;
-  kind: "titulo" | "epiteto" | "atributo" | "posto" | "missao" | "surpresa" | "superacao";
+  kind: "titulo" | "epiteto" | "atributo" | "posto" | "missao" | "surpresa" | "superacao" | "equipe" | "competicao" | "campanha";
   body: string;
   occurredOn: string;
   read?: boolean;

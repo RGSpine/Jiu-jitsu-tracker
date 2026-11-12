@@ -209,6 +209,10 @@ export function SessionForm({ sessionId }: { sessionId?: string }) {
                 onPick={(hit) => updateRola(rola.localId, { partnerName: hit.displayName, partnerUserId: hit.id })}
                 onUnlink={() => updateRola(rola.localId, { partnerUserId: null })}
               />
+              <div className="choice-row">
+                <button type="button" className={`chip${rola.simulation ? " chip-on" : ""}`} onClick={() => updateRola(rola.localId, { simulation: !rola.simulation })}>Simulação</button>
+                <button type="button" className={`chip${rola.startedStanding ? " chip-on" : ""}`} onClick={() => updateRola(rola.localId, { startedStanding: !rola.startedStanding })}>Começou em pé</button>
+              </div>
               <div className="choice-row" role="group" aria-label="Resultado">
                 {RESULT_OPTIONS.map((item) => (
                   <button key={item.id} type="button" className={`result result-${item.id}${rola.result === item.id ? " result-on" : ""}`} aria-pressed={rola.result === item.id} onClick={() => updateRola(rola.localId, { result: item.id })}>

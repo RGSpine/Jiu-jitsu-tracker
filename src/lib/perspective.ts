@@ -65,6 +65,8 @@ export function toPerspective(
     submissionsApplied: refsFor(rola.actions, myPerformer, "finalizacao", byId),
     submissionsSuffered: refsFor(rola.actions, theirPerformer, "finalizacao", byId),
     techniquesUsed: refsFor(rola.actions, myPerformer, "tecnica", byId),
+    simulation: Boolean(rola.simulation),
+    startedStanding: Boolean(rola.startedStanding),
   };
 }
 
@@ -103,5 +105,7 @@ export function draftFromRola(rola: StoredRola): RolaDraft {
     techniquesUsed: ids("self", "tecnica"),
     submissionsApplied: ids("self", "finalizacao"),
     submissionsSuffered: ids("partner", "finalizacao"),
+    simulation: Boolean(rola.simulation),
+    startedStanding: Boolean(rola.startedStanding),
   };
 }

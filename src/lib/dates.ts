@@ -42,3 +42,13 @@ export function formatNumber(value: number, digits = 0): string {
 export function inRange(iso: string, start: string, end: string): boolean {
   return iso >= start && iso <= end;
 }
+
+export function daysBetween(from: string, to: string): number {
+  return Math.round((parseIso(to).getTime() - parseIso(from).getTime()) / 86_400_000);
+}
+
+export function startOfWeek(iso: string): string {
+  const day = parseIso(iso).getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+  return addDays(iso, diff);
+}

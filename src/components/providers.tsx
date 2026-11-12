@@ -26,14 +26,37 @@ import {
   loadDemoDb,
   saveDemoDb,
 } from "@/lib/demo-db";
+import {
+  demoAcceptInvite,
+  demoCreateTeam,
+  demoDeleteCompetition,
+  demoInvite,
+  demoJoinCode,
+  demoLeaveTeam,
+  demoRemoveMember,
+  demoRenameTeam,
+  demoSaveCompetition,
+  demoSavePlan,
+  demoSearchAthletes,
+  demoSetPrimary,
+  demoSocialSnapshot,
+  demoTeamCards,
+  type TeamCard,
+} from "@/lib/demo-social";
+import type { SocialSnapshot } from "@/lib/social";
+import { socialRepository } from "@/lib/supabase/social";
 import type { SystemLogEntry } from "@/lib/progression";
 import { browserRepository } from "@/lib/supabase/repository";
 import type {
   Belt,
+  Competition,
+  CompetitionMatch,
+  DiscoverHit,
   Federation,
   Modality,
   PartnerHit,
   PerspectiveRola,
+  PrepPlan,
   Profile,
   ScoringRule,
   SessionDraft,
@@ -65,7 +88,21 @@ type AppContextValue = {
   sendMagicLink: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
   enterDemo: () => void;
-  updateProfile: (patch: Pick<Profile, "displayName" | "belt" | "stripes" | "academy" | "preferredModality">) => Promise<void>;
+  updateProfile: (patch: Pick<Profile, "displayName" | "belt" | "stripes" | "academy" | "preferredModality"> & Partial<Pick<Profile, "username" | "discoverable" | "isCompetitor">>) => Promise<void>;
+  teams: () => Promise<TeamCard[]>;
+  searchAthletes: (query: string) => Promise<DiscoverHit[]>;
+  createTeam: (name: string) => Promise<void>;
+  renameTeam: (id: string, name: string) => Promise<void>;
+  inviteMember: (teamId: string, userId: string) => Promise<void>;
+  acceptInvite: (teamId: string) => Promise<void>;
+  joinTeam: (code: string) => Promise<void>;
+  leaveTeam: (id: string) => Promise<void>;
+  removeMember: (teamId: string, userId: string) => Promise<void>;
+  setPrimaryTeam: (id: string | null) => Promise<void>;
+  socialSnapshot: () => Promise<SocialSnapshot>;
+  saveCompetition: (input: Omit<Competition, "id" | "userId"> & { id?: string; matches: Omit<CompetitionMatch, "id" | "competitionId">[] }) => Promise<string>;
+  deleteCompetition: (id: string) => Promise<void>;
+  savePlan: (input: Omit<PrepPlan, "id" | "userId"> & { id?: string }) => Promise<void>;
   searchPartners: (query: string) => Promise<PartnerHit[]>;
   reference: () => Promise<{ techniques: Technique[]; rules: ScoringRule[]; federations: Federation[] }>;
   rolas: () => Promise<PerspectiveRola[]>;
@@ -305,6 +342,137 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           return;
         }
         await browserRepository().markLogRead();
+      },
+      async teams() {
+        if (mode === "demo") return demoTeamCards(loadDemoDb());
+        return socialRepository().teams();
+      },
+      async searchAthletes(query) {
+        if (mode === "demo") return demoSearchAthletes(loadDemoDb(), query);
+        return socialRepository().search(query);
+      },
+      async createTeam(name) {
+        if (mode === "demo") {
+          const db = demoCreateTeam(loadDemoDb(), name);
+          saveDemoDb(db);
+          bump(demoProfile(db), user);
+          return;
+        }
+        await socialRepository().createTeam(name);
+        bump(await browserRepository().loadProfile(), user);
+      },
+      async renameTeam(id, name) {
+        if (mode === "demo") {
+          const db = demoRenameTeam(loadDemoDb(), id, name);
+          saveDemoDb(db);
+          bump(demoProfile(db), user);
+          return;
+        }
+        await socialRepository().renameTeam(id, name);
+      },
+      async inviteMember(teamId, userIdToInvite) {
+        if (mode === "demo") {
+          saveDemoDb(demoInvite(loadDemoDb(), teamId, userIdToInvite));
+          return;
+        }
+        await socialRepository().invite(teamId, userIdToInvite);
+      },
+      async acceptInvite(teamId) {
+        if (mode === "demo") {
+          const db = demoAcceptInvite(loadDemoDb(), teamId);
+          saveDemoDb(db);
+          bump(demoProfile(db), user);
+          return;
+        }
+        await socialRepository().accept(teamId);
+        bump(await browserRepository().loadProfile(), user);
+      },
+      async joinTeam(code) {
+        if (mode === "demo") {
+          const db = demoJoinCode(loadDemoDb(), code);
+          saveDemoDb(db);
+          bump(demoProfile(db), user);
+          return;
+        }
+        await socialRepository().join(code);
+        bump(await browserRepository().loadProfile(), user);
+      },
+      async leaveTeam(id) {
+        if (mode === "demo") {
+          const db = demoLeaveTeam(loadDemoDb(), id);
+          saveDemoDb(db);
+          bump(demoProfile(db), user);
+          return;
+        }
+        await socialRepository().leave(id);
+        bump(await browserRepository().loadProfile(), user);
+      },
+      async removeMember(teamId, memberId) {
+        if (mode === "demo") {
+          const db = demoRemoveMember(loadDemoDb(), teamId, memberId);
+          saveDemoDb(db);
+          bump(demoProfile(db), user);
+          return;
+        }
+        await socialRepository().remove(teamId, memberId);
+      },
+      async setPrimaryTeam(id) {
+        if (mode === "demo") {
+          const db = demoSetPrimary(loadDemoDb(), id);
+          saveDemoDb(db);
+          bump(demoProfile(db), user);
+          return;
+        }
+        await socialRepository().setPrimary(id);
+        bump(await browserRepository().loadProfile(), user);
+      },
+      async socialSnapshot() {
+        if (mode === "demo") return demoSocialSnapshot(loadDemoDb());
+        const repo = browserRepository();
+        const catalog = await repo.loadCatalog();
+        const [rolas, sessions] = await Promise.all([repo.loadRolas(catalog.techniques), repo.loadSessions(catalog.techniques)]);
+        return socialRepository().snapshot(rolas.filter((rola) => rola.ownedByMe).map((rola) => ({
+          occurredOn: rola.occurredOn,
+          modality: rola.modality,
+          durationMinutes: rola.durationMinutes,
+          sessionId: rola.sessionId,
+          pointsFor: rola.pointsFor,
+          pointsAgainst: rola.pointsAgainst,
+          result: rola.result,
+          opponentUserId: rola.opponentUserId,
+          simulation: rola.simulation,
+          startedStanding: rola.startedStanding,
+          submissionsApplied: rola.submissionsApplied,
+          submissionsSuffered: rola.submissionsSuffered,
+          techniquesUsed: rola.techniquesUsed,
+        })), sessions.map((session) => session.date));
+      },
+      async saveCompetition(input) {
+        if (mode === "demo") {
+          const result = demoSaveCompetition(loadDemoDb(), input);
+          saveDemoDb(result.db);
+          bump(demoProfile(result.db), user);
+          return result.id;
+        }
+        return socialRepository().saveCompetition({ ...input, id: input.id ?? "" });
+      },
+      async deleteCompetition(id) {
+        if (mode === "demo") {
+          const db = demoDeleteCompetition(loadDemoDb(), id);
+          saveDemoDb(db);
+          bump(demoProfile(db), user);
+          return;
+        }
+        await socialRepository().deleteCompetition(id);
+      },
+      async savePlan(input) {
+        if (mode === "demo") {
+          const db = demoSavePlan(loadDemoDb(), input);
+          saveDemoDb(db);
+          bump(demoProfile(db), user);
+          return;
+        }
+        await socialRepository().savePlan({ ...input, id: input.id ?? "" });
       },
       async loadSample() {
         if (!profile) throw new Error("Entre na sua conta para continuar.");

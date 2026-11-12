@@ -109,6 +109,17 @@ export function Dashboard() {
   const [today, setToday] = useState<string | null>(null);
   const [rephrased, setRephrased] = useState<{ signature: string; lines: string[] } | null>(null);
   const [chart, setChart] = useState<ChartId>("volume");
+  const [banner, setBanner] = useState<{ name: string; days: number; phaseLabel: string } | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    void app.socialSnapshot().then((social) => {
+      if (alive) setBanner(social.banner);
+    }).catch(() => undefined);
+    return () => {
+      alive = false;
+    };
+  }, [app]);
 
   useEffect(() => {
     let alive = true;
@@ -169,6 +180,13 @@ export function Dashboard() {
         <h1>{app.profile.displayName.split(" ")[0]}</h1>
       </header>
       <div className="pad stack">
+        {banner ? (
+          <a className="prep-banner" href="/competidor#campanha">
+            <span>{banner.phaseLabel}</span>
+            <strong>D-{banner.days}</strong>
+            <em>{banner.name}</em>
+          </a>
+        ) : null}
         <div className="filters" role="group" aria-label="Período">
           {PERIODS.map((item) => (
             <button key={item.id} type="button" className={`chip${period === item.id ? " chip-on" : ""}`} onClick={() => setPeriod(item.id)}>{item.label}</button>

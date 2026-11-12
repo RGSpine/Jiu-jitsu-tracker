@@ -1,4 +1,4 @@
-import type { Federation, ScoringRule } from "@/lib/types";
+import type { AgeDivision, Belt, Federation, ScoringRule } from "@/lib/types";
 
 export const federations: Federation[] = [
   { id: "ibjjf", name: "IBJJF", isDefault: true },
@@ -19,4 +19,21 @@ export function defaultFederation(): Federation {
 
 export function rulesFor(federationId: string): ScoringRule[] {
   return scoringRules.filter((rule) => rule.federationId === federationId);
+}
+
+const ADULT_MINUTES: Record<Belt, number> = {
+  branca: 5,
+  azul: 6,
+  roxa: 7,
+  marrom: 8,
+  preta: 10,
+  coral: 10,
+  vermelha: 10,
+};
+
+/** Tempo oficial de luta IBJJF, em minutos, para a faixa e a idade. */
+export function ibjjfMatchMinutes(belt: Belt | null, age: AgeDivision = "adulto"): number {
+  if (age === "master") return 5;
+  if (age === "juvenil") return belt === "branca" || belt === "azul" || !belt ? 4 : 5;
+  return ADULT_MINUTES[belt ?? "branca"];
 }

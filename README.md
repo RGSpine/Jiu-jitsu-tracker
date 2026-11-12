@@ -34,9 +34,14 @@ Sem as chaves do Supabase, o app abre em **modo demonstração**: os dados ficam
 
 ## 2. Rodar a migration
 
-Abra **SQL Editor → New query**, cole o arquivo inteiro `supabase/migrations/20261111000000_init.sql` e execute.
+Abra **SQL Editor → New query** e execute, nesta ordem:
 
-O arquivo cria as tabelas, as políticas de Row Level Security, o gatilho de perfil, as funções de salvar/apagar treino e de buscar parceiro, e carrega a IBJJF e o catálogo de técnicas.
+1. `supabase/migrations/20261111000000_init.sql`
+2. `supabase/migrations/20261112000000_progression.sql`
+3. `supabase/migrations/20261113000000_system_log.sql`
+4. `supabase/migrations/20261114000000_teams_competition.sql`
+
+O primeiro arquivo cria as tabelas, as políticas de Row Level Security, o gatilho de perfil, as funções de salvar e apagar treino e de buscar parceiro, e carrega a IBJJF e o catálogo. Os seguintes acrescentam progressão, o registro do sistema, equipes e competições.
 
 Se você usa a CLI do Supabase no seu computador:
 
@@ -185,6 +190,14 @@ Superação são oito títulos ocultos, cada um uma vez. O bônus é 30 XP, fora
 - Acerto de contas: vencer um parceiro vinculado que tinha vencido os 3 rolas decididos anteriores contra você.
 
 A pausa é a distância entre as datas: 30 dias entra, 29 não.
+
+## Equipe, competidor e campanha
+
+O desenho está em `docs/TEAMS_AND_COMPETITION.md`. A equipe fica no perfil, não numa aba nova. A aba Competidor só aparece com “Sou competidor” ligado, e a barra continua com cinco itens.
+
+Na demonstração, o Roberto já entra na Tatame Central com Ana, Lucas e Marina. Pedro está na busca e fora da equipe. Há três competições com lutas e a campanha da Copa Verão em 30/01/2027.
+
+O XP de competição, da missão da equipe e da fase da campanha fica fora do teto diário de 150. Título histórico, sem lutas, vale 40 XP e no máximo uma competição pontua por dia.
 
 ## Privacidade
 
