@@ -1,0 +1,15 @@
+{
+  "appId": "com.rgspine.tatame",
+  "appName": "Tatame",
+  "webDir": "public",
+  "ios": {
+    "contentInset": "always"
+  },
+  "android": {
+    "allowMixedContent": false
+  },
+  "server": {
+    "androidScheme": "https",
+    "iosScheme": "capacitor"
+  }
+}
