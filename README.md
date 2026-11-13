@@ -22,7 +22,7 @@ Sem as chaves do Supabase, o app abre em **modo demonstração**: os dados ficam
 
 ## Requisitos
 
-- Node.js 20.9 ou mais recente
+- Node.js 22.12 ou mais recente (o `.nvmrc` pede a linha 22)
 - Conta no [Supabase](https://supabase.com)
 - Conta na [Vercel](https://vercel.com) para publicar
 
@@ -129,7 +129,7 @@ npm run build
 5. Volte no Supabase e acrescente a URL de produção nas Redirect URLs e no Site URL.
 6. Abra o app no celular e use **Adicionar à Tela de Início**. O manifest e o service worker já estão no projeto.
 
-O build da Vercel é o padrão do Next.js: `npm run build`.
+O build da Vercel é o padrão do Next.js: `npm run build`. O campo `engines` pede Node `>=22.12`, a mesma faixa do Vite 8 e do Vitest 5. A Vercel escolhe uma versão nessa faixa; localmente o `.nvmrc` fica na linha 22.
 
 ## Como o rola compartilhado funciona
 
